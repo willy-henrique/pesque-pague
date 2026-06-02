@@ -10,6 +10,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { formatCurrency } from "@/lib/utils";
 import type { Produto, Categoria } from "@/types";
 import toast from "react-hot-toast";
@@ -31,6 +32,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function Produtos() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { data: produtos } = useCollection<Produto>("produtos", [orderBy("nome", "asc")]);
   const { data: cats }     = useCollection<Categoria>("categorias", [orderBy("ordem", "asc")]);
 
@@ -100,10 +102,17 @@ export default function Produtos() {
     toast.success(produto.ativo ? "Produto desativado." : "Produto ativado.");
   };
 
-  const handleDelete = async (produto: Produto) => {
-    if (!confirm(`Excluir "${produto.nome}"?`)) return;
-    await deleteDoc(doc(db, "produtos", produto.id));
-    toast.success("Produto excluído.");
+  const handleDelete = (produto: Produto) => {
+    confirm({
+      title: "Excluir produto?",
+      description: `O produto "${produto.nome}" será removido permanentemente do cardápio.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteDoc(doc(db, "produtos", produto.id));
+        toast.success("Produto excluído.");
+      },
+    });
   };
 
   return (
@@ -263,6 +272,8 @@ export default function Produtos() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {ConfirmDialog}
     </div>
   );
 }

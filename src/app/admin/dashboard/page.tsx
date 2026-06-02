@@ -93,8 +93,10 @@ export default function Dashboard() {
 
       {/* ── Page header ─────────────────────────────────── */}
       <div>
-        <h1 className="text-xl font-semibold text-forest-900">Dashboard</h1>
-        <p className="text-forest-500 text-sm mt-0.5">Acompanhe os pedidos em tempo real</p>
+        <h1 className="text-xl font-semibold text-forest-900 dark:text-forest-50">Dashboard</h1>
+        <p className="text-forest-500 dark:text-forest-300 text-sm mt-0.5">
+          Acompanhe os pedidos em tempo real
+        </p>
       </div>
 
       {/* ── Stats ───────────────────────────────────────── */}
@@ -129,16 +131,15 @@ export default function Dashboard() {
           return (
             <div
               key={status}
-              className="bg-white rounded-2xl border border-forest-200 overflow-hidden flex flex-col"
-              style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}
+              className="bg-white dark:bg-forest-800 rounded-2xl border border-forest-200 dark:border-forest-700 overflow-hidden flex flex-col shadow-card dark:shadow-none"
             >
               {/* Column header */}
-              <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-forest-200">
+              <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-forest-200 dark:border-forest-700">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                   style={{ background: `${accent}18` }}>
                   <Icon className="w-3.5 h-3.5" style={{ color: accent }} />
                 </div>
-                <span className="font-semibold text-sm text-forest-800 flex-1">{label}</span>
+                <span className="font-semibold text-sm text-forest-800 dark:text-forest-100 flex-1">{label}</span>
                 {col.length > 0 && (
                   <span className={`badge ${badge}`}>{col.length}</span>
                 )}
@@ -154,10 +155,10 @@ export default function Dashboard() {
                       animate={{ opacity: 1 }}
                       className="flex flex-col items-center justify-center h-full py-10 gap-2"
                     >
-                      <div className="w-8 h-8 rounded-full bg-forest-100 flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-forest-400" />
+                      <div className="w-8 h-8 rounded-full bg-forest-100 dark:bg-forest-700 flex items-center justify-center">
+                        <Icon className="w-4 h-4 text-forest-400 dark:text-forest-300" />
                       </div>
-                      <p className="text-forest-400 text-xs font-medium">Nenhum pedido</p>
+                      <p className="text-forest-400 dark:text-forest-300 text-xs font-medium">Nenhum pedido</p>
                     </motion.div>
                   ) : (
                     col.map((pedido) => (
@@ -195,17 +196,18 @@ function StatCard({
   iconColor: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-forest-200 p-5"
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>
+    <div className="bg-white dark:bg-forest-800 rounded-2xl border border-forest-200 dark:border-forest-700 p-5 shadow-card dark:shadow-none">
       <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: iconBg }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 dark:ring-1 dark:ring-white/10"
+          style={{ background: iconBg }}
+        >
           <Icon className="w-5 h-5" style={{ color: iconColor }} />
         </div>
       </div>
       <div className="mt-4">
-        <p className="text-2xl font-bold text-forest-900 tracking-tight">{value}</p>
-        <p className="text-forest-500 text-sm mt-0.5">{label}</p>
+        <p className="text-2xl font-bold text-forest-900 dark:text-forest-50 tracking-tight">{value}</p>
+        <p className="text-forest-500 dark:text-forest-300 text-sm mt-0.5">{label}</p>
       </div>
     </div>
   );
@@ -232,22 +234,19 @@ function PedidoCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.2 }}
-      className="bg-white rounded-xl border border-forest-200 overflow-hidden"
-      style={{
-        boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
-        borderLeft: `3px solid ${accent}`,
-      }}
+      className="bg-white dark:bg-forest-900 rounded-xl border border-forest-200 dark:border-forest-600 overflow-hidden shadow-sm dark:shadow-none"
+      style={{ borderLeft: `3px solid ${accent}` }}
     >
       <div className="p-3 space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5">
-            <MapPin className="w-3 h-3 text-forest-400 shrink-0" />
-            <span className="text-forest-900 font-semibold text-xs truncate">
+            <MapPin className="w-3 h-3 text-forest-400 dark:text-forest-300 shrink-0" />
+            <span className="text-forest-900 dark:text-forest-50 font-semibold text-xs truncate">
               {pedido.piqueNome}
             </span>
           </div>
-          <span className="text-forest-400 text-[10px] shrink-0">
+          <span className="text-forest-400 dark:text-forest-300 text-[10px] shrink-0">
             {pedido.criadoEm ? getRelativeTime(pedido.criadoEm.toDate()) : "--"}
           </span>
         </div>
@@ -255,24 +254,24 @@ function PedidoCard({
         {/* Items */}
         <div className="space-y-0.5">
           {pedido.itens.slice(0, 3).map((item, i) => (
-            <p key={i} className="text-forest-600 text-[11px] truncate">
-              <span className="font-medium text-forest-700">{item.quantidade}×</span>{" "}
+            <p key={i} className="text-forest-600 dark:text-forest-200 text-[11px] truncate">
+              <span className="font-medium text-forest-700 dark:text-forest-100">{item.quantidade}×</span>{" "}
               {item.nome}
             </p>
           ))}
           {pedido.itens.length > 3 && (
-            <p className="text-forest-400 text-[11px]">
+            <p className="text-forest-400 dark:text-forest-300 text-[11px]">
               +{pedido.itens.length - 3} item{pedido.itens.length - 3 > 1 ? "s" : ""}
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-forest-100">
-          <span className="font-bold text-xs text-forest-900">
+        <div className="flex items-center justify-between pt-1.5 border-t border-forest-100 dark:border-forest-700">
+          <span className="font-bold text-xs text-forest-900 dark:text-forest-50">
             {formatCurrency(pedido.total)}
           </span>
-          <span className="text-[10px] text-forest-400 font-mono">
+          <span className="text-[10px] text-forest-400 dark:text-forest-300 font-mono">
             #{pedido.id.slice(-5).toUpperCase()}
           </span>
         </div>
@@ -282,7 +281,7 @@ function PedidoCard({
       {proximo && (
         <button
           onClick={onAvancar}
-          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors border-t border-forest-100 hover:opacity-90"
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors border-t border-forest-100 dark:border-forest-700 hover:opacity-90"
           style={{ background: `${accent}12`, color: accent }}
         >
           {STATUS_LABELS[proximo]}

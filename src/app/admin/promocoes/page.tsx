@@ -13,6 +13,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { formatCurrency } from "@/lib/utils";
 import type { Promocao, Produto } from "@/types";
 import toast from "react-hot-toast";
@@ -35,6 +36,7 @@ const EMPTY: FormState = {
 };
 
 export default function Promocoes() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { data: promocoes } = useCollection<Promocao>("promocoes", [
     orderBy("criadoEm", "desc"),
   ]);
@@ -125,10 +127,17 @@ export default function Promocoes() {
     toast.success(p.ativo ? "Promoção pausada." : "Promoção ativada!");
   };
 
-  const handleDelete = async (p: Promocao) => {
-    if (!confirm(`Excluir promoção "${p.titulo}"?`)) return;
-    await deleteDoc(doc(db, "promocoes", p.id));
-    toast.success("Promoção excluída.");
+  const handleDelete = (p: Promocao) => {
+    confirm({
+      title: "Excluir promoção?",
+      description: `A promoção "${p.titulo}" será removida e deixará de aparecer no cardápio.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteDoc(doc(db, "promocoes", p.id));
+        toast.success("Promoção excluída.");
+      },
+    });
   };
 
   const pct = desconto();
@@ -387,6 +396,8 @@ export default function Promocoes() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {ConfirmDialog}
     </div>
   );
 }

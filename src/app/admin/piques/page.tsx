@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   buildPiquePublicUrl,
   formatCurrency,
@@ -50,6 +51,7 @@ const STATUS_CFG: Record<PiqueStatus, {
 };
 
 export default function Piques() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { data: piques } = useCollection<Pique>("piques", [orderBy("numero", "asc")]);
   const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "desc")]);
   const [modal, setModal]               = useState(false);
@@ -119,10 +121,18 @@ export default function Piques() {
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (pique: Pique) => {
-    if (!confirm(`Excluir "${pique.nome || pique.numero}"?`)) return;
-    await deleteDoc(doc(db, "piques", pique.id));
-    toast.success("Mesa excluída.");
+  const handleDelete = (pique: Pique) => {
+    const nome = pique.nome || `Mesa ${pique.numero}`;
+    confirm({
+      title: "Excluir mesa?",
+      description: `A mesa "${nome}" será removida permanentemente. O QR Code vinculado deixará de funcionar.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteDoc(doc(db, "piques", pique.id));
+        toast.success("Mesa excluída.");
+      },
+    });
   };
 
   const toggleAtivo = async (pique: Pique) => {
@@ -783,6 +793,8 @@ font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir / Salvar PDF</b
           </motion.div>
         )}
       </AnimatePresence>
+
+      {ConfirmDialog}
     </div>
   );
 }

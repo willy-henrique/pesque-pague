@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Toggle manual no admin (classe .dark no html) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Slate / Neutral palette */
   --color-forest-950: #020617;
@@ -344,6 +347,14 @@ html.dark .skeleton-pulse {
   background-size: 200% 100%;
 }
 html.dark .section-divider { background: #334155; }
+
+/* Admin main — legible text on dark page background */
+html.dark main .text-forest-900 { color: #F8FAFC; }
+html.dark main .text-forest-800 { color: #E2E8F0; }
+html.dark main .text-forest-700 { color: #CBD5E1; }
+html.dark main .text-forest-600 { color: #CBD5E1; }
+html.dark main .text-forest-500 { color: #94A3B8; }
+html.dark main .text-forest-400 { color: #94A3B8; }
 
 /* Dark status badges — slightly more opaque for legibility */
 html.dark .status-novo    { background: rgba(59,130,246,0.14);  color: #93C5FD; border-color: rgba(59,130,246,0.28); }

@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Tags, X, GripVertical } from "lucide-react";
 import { addDoc, updateDoc, deleteDoc, doc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import type { Categoria } from "@/types";
 import toast from "react-hot-toast";
 
@@ -16,6 +17,7 @@ const EMPTY: FormState = { nome: "", icone: "🎣", ordem: "0", ativo: true };
 
 export default function Categorias() {
   const { data: categorias } = useCollection<Categoria>("categorias", [orderBy("ordem", "asc")]);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [modal, setModal]   = useState(false);
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [form, setForm]     = useState<FormState>(EMPTY);
@@ -48,10 +50,17 @@ export default function Categorias() {
     }
   };
 
-  const handleDelete = async (cat: Categoria) => {
-    if (!confirm(`Excluir "${cat.nome}"?`)) return;
-    await deleteDoc(doc(db, "categorias", cat.id));
-    toast.success("Categoria excluída.");
+  const handleDelete = (cat: Categoria) => {
+    confirm({
+      title: "Excluir categoria?",
+      description: `A categoria "${cat.nome}" será removida permanentemente. Produtos vinculados podem ficar sem categoria.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteDoc(doc(db, "categorias", cat.id));
+        toast.success("Categoria excluída.");
+      },
+    });
   };
 
   return (
@@ -177,6 +186,8 @@ export default function Categorias() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {ConfirmDialog}
     </div>
   );
 }
