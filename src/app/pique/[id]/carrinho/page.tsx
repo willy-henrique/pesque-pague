@@ -1,0 +1,197 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Minus, Plus, Trash2, ShoppingCart, Fish, MessageSquare, Receipt } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { useCart } from "@/store/cart";
+import { formatCurrency } from "@/lib/utils";
+
+export default function Carrinho() {
+  const { id } = useParams<{ id: string }>();
+  const router  = useRouter();
+  const cart    = useCart();
+  const [obsAberta, setObsAberta] = useState<string | null>(null);
+
+  const isEmpty = cart.items.length === 0;
+
+  return (
+    <main className="min-h-dvh flex flex-col" style={{ background: "#061208" }}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
+        <div className="flex items-center gap-3 px-4 py-4 max-w-xl mx-auto">
+          <button onClick={() => router.back()} className="btn-ghost p-2 rounded-xl">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <h1 className="font-display text-lg font-semibold text-gold-400">Seu carrinho</h1>
+            <p className="text-forest-400 text-xs">
+              {cart.count() > 0 ? `${cart.count()} ${cart.count() === 1 ? "item" : "itens"}` : "Vazio"}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push(`/pique/${id}/comanda`)}
+            className="btn-ghost px-3 py-2 rounded-xl text-sm"
+            title="Minha Comanda"
+          >
+            <Receipt className="w-5 h-5" />
+          </button>
+          {!isEmpty && (
+            <button
+              onClick={cart.clearCart}
+              className="text-forest-500 hover:text-red-400 transition-colors p-2"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="flex-1 px-4 py-4 max-w-xl mx-auto w-full">
+        <AnimatePresence mode="popLayout">
+          {isEmpty ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-24 gap-5 text-center"
+            >
+              <div className="w-20 h-20 rounded-full glass flex items-center justify-center">
+                <ShoppingCart className="w-8 h-8 text-forest-500" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl text-forest-100 mb-1">Carrinho vazio</h2>
+                <p className="text-forest-400 text-sm">Adicione itens do cardápio para continuar.</p>
+              </div>
+              <button
+                onClick={() => router.push(`/pique/${id}/cardapio`)}
+                className="btn-gold px-6 py-3 rounded-2xl"
+              >
+                <Fish className="w-4 h-4" />
+                Ver Cardápio
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div key="list" className="space-y-3">
+              {cart.items.map((item) => (
+                <motion.div
+                  key={item.produtoId}
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="glass rounded-2xl overflow-hidden"
+                >
+                  <div className="flex gap-3 p-3">
+                    {/* Foto */}
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-forest-800">
+                      {item.fotoUrl ? (
+                        <Image src={item.fotoUrl} alt={item.nome} fill className="object-cover" sizes="64px" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Fish className="w-6 h-6 text-forest-600" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-forest-50 text-sm leading-tight truncate">
+                        {item.nome}
+                      </h3>
+                      <p className="gradient-gold-text font-bold text-sm mt-0.5">
+                        {formatCurrency(item.preco * item.quantidade)}
+                      </p>
+                      {item.quantidade > 1 && (
+                        <p className="text-forest-500 text-xs">
+                          {item.quantidade}× {formatCurrency(item.preco)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Qty controls */}
+                    <div className="flex flex-col items-end justify-between gap-1">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => cart.updateQty(item.produtoId, item.quantidade - 1)}
+                          className="btn-ghost p-1 rounded-lg w-7 h-7 justify-center"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-gold-400 font-bold text-sm w-6 text-center">
+                          {item.quantidade}
+                        </span>
+                        <button
+                          onClick={() => cart.updateQty(item.produtoId, item.quantidade + 1)}
+                          className="btn-gold p-1 rounded-lg w-7 h-7 justify-center"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setObsAberta(obsAberta === item.produtoId ? null : item.produtoId)}
+                        className="flex items-center gap-1 text-forest-400 hover:text-forest-200 text-xs transition-colors"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        {item.obs ? "obs." : "add obs."}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Obs input */}
+                  <AnimatePresence>
+                    {obsAberta === item.produtoId && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 pb-3 border-t border-white/[0.06]">
+                          <input
+                            type="text"
+                            value={item.obs}
+                            onChange={(e) => cart.updateObs(item.produtoId, e.target.value)}
+                            placeholder="Ex: sem gelo, bem passado..."
+                            maxLength={100}
+                            className="input-field mt-2 py-2 text-sm"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Footer */}
+      {!isEmpty && (
+        <div className="sticky bottom-0 p-4 max-w-xl mx-auto w-full">
+          <div className="glass rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-forest-300 font-medium">Total</span>
+              <span className="gradient-gold-text font-bold text-xl font-display">
+                {formatCurrency(cart.total())}
+              </span>
+            </div>
+            <div className="section-divider" />
+            <p className="text-forest-500 text-xs text-center">
+              Pagamento realizado no caixa ao final da pescaria.
+            </p>
+            <button
+              onClick={() => router.push(`/pique/${id}/confirmar`)}
+              className="btn-gold w-full py-3.5 rounded-xl text-base"
+            >
+              Confirmar Pedido
+            </button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

@@ -1,0 +1,11 @@
+{
+  "name": "WillTech Pesqueiros",
+  "short_name": "Pesqueiros",
+  "description": "Faça seu pedido direto do seu pique.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#061208",
+  "theme_color": "#061208",
+  "orientation": "portrait",
+  "icons": []
+}

@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Sistema Pesque Pague
+
+Aplicação web para pedidos por QR Code nas mesas/quiosques, painel administrativo e fluxo de atendimento.
 
 ## Getting Started
 
@@ -14,23 +16,27 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000) no navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variáveis de ambiente
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Configure `NEXT_PUBLIC_APP_URL` com a URL pública do sistema (domínio da Vercel).
 
-## Learn More
+```env
+NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
+```
 
-To learn more about Next.js, take a look at the following resources:
+Essa variável é usada para gerar os QR Codes das mesas com o link público correto.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Rotas principais
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/app`: seleção de mesa para cliente.
+- `/pique/[id]`: landing da mesa via QR Code.
+- `/atendente`: app web de atendente para lançar pedido/manual por mesa.
+- `/admin`: ERP (produtos, mesas, dashboard, caixa, etc.).
 
-## Deploy on Vercel
+## Deploy na Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Faça deploy do projeto.
+2. Em **Project Settings > Environment Variables**, adicione `NEXT_PUBLIC_APP_URL`.
+3. Gere os QR Codes no ERP em `admin/piques`.
