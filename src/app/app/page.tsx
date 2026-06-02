@@ -103,7 +103,11 @@ export default function AppCliente() {
                     <p className="font-semibold text-forest-900 truncate">
                       {mesa.nome || `Mesa ${mesa.numero}`}
                     </p>
-                    <p className="text-forest-9000 text-sm mt-0.5">Abrir cardápio</p>
+                    <p className="text-forest-9000 text-sm mt-0.5">
+                      {mesa.status === "reservado" && mesa.reserva?.nome
+                        ? `Reservado para ${mesa.reserva.nome}`
+                        : "Abrir cardápio"}
+                    </p>
                   </div>
                 </Link>
               </motion.div>

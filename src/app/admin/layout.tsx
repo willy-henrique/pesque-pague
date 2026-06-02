@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useCollection, orderBy } from "@/hooks/useFirestore";
+import type { Pedido } from "@/types";
 import toast from "react-hot-toast";
 
 const NAV_ITEMS = [
@@ -52,6 +54,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { dark, toggle } = useTheme();
   const [authed, setAuthed]           = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "desc")]);
+
+  const navBadges: Record<string, number> = {
+    "/admin/cozinha": pedidos.filter((p) => p.status === "novo").length,
+    "/admin/caixa": pedidos.filter((p) => p.status === "entregue").length,
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -84,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SidebarContent
           pathname={pathname}
           dark={dark}
+          navBadges={navBadges}
           onToggleTheme={toggle}
           onLogout={handleLogout}
         />
@@ -119,6 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <SidebarContent
                 pathname={pathname}
                 dark={dark}
+                navBadges={navBadges}
                 onToggleTheme={toggle}
                 onLogout={handleLogout}
                 onNavClick={() => setSidebarOpen(false)}
@@ -174,12 +184,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 function SidebarContent({
   pathname,
   dark,
+  navBadges,
   onToggleTheme,
   onLogout,
   onNavClick,
 }: {
   pathname: string;
   dark: boolean;
+  navBadges: Record<string, number>;
   onToggleTheme: () => void;
   onLogout: () => void;
   onNavClick?: () => void;
@@ -211,6 +223,7 @@ function SidebarContent({
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
+          const badge = navBadges[href] ?? 0;
           return (
             <Link
               key={href}
@@ -239,6 +252,17 @@ function SidebarContent({
                 style={{ color: active ? "#2DD4BF" : undefined }}
               />
               <span className="text-sm font-medium flex-1">{label}</span>
+              {badge > 0 && (
+                <span
+                  className="min-w-5 h-5 rounded-full px-1.5 text-[11px] font-bold flex items-center justify-center"
+                  style={{
+                    background: active ? "#F59E0B" : "rgba(245,158,11,0.2)",
+                    color: active ? "#0F172A" : "#FCD34D",
+                  }}
+                >
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
               {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2DD4BF" }} />}
             </Link>
           );

@@ -30,6 +30,12 @@ export interface Produto {
 
 export type PiqueStatus = "livre" | "ocupado" | "reservado" | "bloqueado";
 
+export interface ReservaPique {
+  nome: string;
+  telefone: string;
+  data: string; // YYYY-MM-DD
+}
+
 export interface Pique {
   id: string;
   numero: string;
@@ -37,6 +43,7 @@ export interface Pique {
   ativo: boolean;
   status?: PiqueStatus;
   capacidade?: number;
+  reserva?: ReservaPique;
 }
 
 export interface ItemPedido {

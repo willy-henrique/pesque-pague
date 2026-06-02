@@ -17,9 +17,10 @@ import {
   buildPiquePublicUrl,
   formatCurrency,
   formatTime,
+  getBrasiliaDateKey,
   isBeforeBrasiliaDay,
 } from "@/lib/utils";
-import type { Pedido, Pique, PiqueStatus } from "@/types";
+import type { Pedido, Pique, PiqueStatus, ReservaPique } from "@/types";
 import toast from "react-hot-toast";
 
 interface FormState {
@@ -30,6 +31,7 @@ interface FormState {
   status: PiqueStatus;
 }
 const EMPTY: FormState = { numero: "", nome: "", capacidade: "", ativo: true, status: "livre" };
+const EMPTY_RESERVA: ReservaPique = { nome: "", telefone: "", data: "" };
 
 const STATUS_LABEL: Record<PiqueStatus, string> = {
   livre:     "Livre",
@@ -56,6 +58,11 @@ export default function Piques() {
   const [saving, setSaving]             = useState(false);
   const [qrModal, setQrModal]           = useState<Pique | null>(null);
   const [detalhePique, setDetalhePique] = useState<Pique | null>(null);
+  const [reservaModal, setReservaModal] = useState<Pique | null>(null);
+  const [reservaForm, setReservaForm]   = useState<ReservaPique>({
+    ...EMPTY_RESERVA,
+    data: getBrasiliaDateKey(),
+  });
   const [recebendo, setRecebendo]       = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -123,8 +130,37 @@ export default function Piques() {
   };
 
   const setStatus = async (pique: Pique, status: PiqueStatus) => {
-    await updateDoc(doc(db, "piques", pique.id), { status });
+    if (status === "reservado") {
+      setReservaForm({
+        nome: pique.reserva?.nome ?? "",
+        telefone: pique.reserva?.telefone ?? "",
+        data: pique.reserva?.data ?? getBrasiliaDateKey(),
+      });
+      setReservaModal(pique);
+      return;
+    }
+
+    await updateDoc(doc(db, "piques", pique.id), { status, reserva: null });
     toast.success(`${pique.nome || `Mesa ${pique.numero}`} → ${STATUS_LABEL[status]}`);
+  };
+
+  const salvarReserva = async () => {
+    if (!reservaModal) return;
+    if (!reservaForm.nome.trim()) return toast.error("Informe o nome do reservista.");
+    if (!reservaForm.telefone.trim()) return toast.error("Informe o telefone do reservista.");
+    if (!reservaForm.data) return toast.error("Informe a data da reserva.");
+
+    await updateDoc(doc(db, "piques", reservaModal.id), {
+      status: "reservado",
+      reserva: {
+        nome: reservaForm.nome.trim(),
+        telefone: reservaForm.telefone.trim(),
+        data: reservaForm.data,
+      },
+    });
+    toast.success(`${reservaModal.nome || `Mesa ${reservaModal.numero}`} reservada.`);
+    setReservaModal(null);
+    setReservaForm({ ...EMPTY_RESERVA, data: getBrasiliaDateKey() });
   };
 
   const receberComanda = async () => {
@@ -320,6 +356,11 @@ font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir / Salvar PDF</b
                         <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dot }} />
                         {STATUS_LABEL[status]}
                       </div>
+                      {status === "reservado" && pique.reserva && (
+                        <p className="text-xs mt-1 text-forest-600">
+                          {pique.reserva.nome} · {pique.reserva.data}
+                        </p>
+                      )}
 
                       {/* Orders info */}
                       {pedidosAbertos.length > 0 && (
@@ -534,6 +575,65 @@ font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir / Salvar PDF</b
                   </div>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Reserva Modal ─────────────────────────────── */}
+      <AnimatePresence>
+        {reservaModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setReservaModal(null)}
+          >
+            <motion.div
+              initial={{ y: 32, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 32, opacity: 0 }}
+              className="glass rounded-2xl w-full max-w-sm p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-lg text-forest-900">
+                  Reservar {reservaModal.nome || `Mesa ${reservaModal.numero}`}
+                </h2>
+                <button onClick={() => setReservaModal(null)} className="btn-ghost p-2 rounded-xl">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-forest-700 mb-1.5">Data da reserva</label>
+                  <input
+                    type="date"
+                    value={reservaForm.data}
+                    onChange={(e) => setReservaForm({ ...reservaForm, data: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-forest-700 mb-1.5">Nome</label>
+                  <input
+                    value={reservaForm.nome}
+                    onChange={(e) => setReservaForm({ ...reservaForm, nome: e.target.value })}
+                    placeholder="Nome do reservista"
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-forest-700 mb-1.5">Telefone (senha)</label>
+                  <input
+                    value={reservaForm.telefone}
+                    onChange={(e) => setReservaForm({ ...reservaForm, telefone: e.target.value })}
+                    placeholder="(xx) xxxxx-xxxx"
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <button onClick={salvarReserva} className="btn-gold w-full py-3 rounded-xl">
+                Salvar reserva
+              </button>
             </motion.div>
           </motion.div>
         )}

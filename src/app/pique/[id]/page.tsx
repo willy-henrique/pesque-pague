@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Fish, ChevronRight, MapPin, Receipt, MoonStar } from "lucide-react";
+import { Fish, ChevronRight, MapPin, Receipt, MoonStar, LockKeyhole } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCart } from "@/store/cart";
 import type { Pique, Config } from "@/types";
 import { useState } from "react";
+import { getBrasiliaDateKey } from "@/lib/utils";
 
 export default function PiqueLanding() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,8 @@ export default function PiqueLanding() {
   const [loading, setLoading]   = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [fechado, setFechado]   = useState(false);
+  const [senhaReserva, setSenhaReserva] = useState("");
+  const [reservaLiberada, setReservaLiberada] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -37,6 +40,10 @@ export default function PiqueLanding() {
       const piqueData = { id: piqueSnap.id, ...piqueSnap.data() } as Pique;
       setPiqueData(piqueData);
       setPique(piqueData.id, piqueData.nome || `Mesa ${piqueData.numero}`);
+      const senhaSalva = sessionStorage.getItem(`reserva-auth-${piqueData.id}`);
+      if (senhaSalva && piqueData.reserva?.telefone && senhaSalva === piqueData.reserva.telefone) {
+        setReservaLiberada(true);
+      }
 
       if (configSnap.exists()) {
         const cfg = configSnap.data() as Config;
@@ -82,6 +89,70 @@ export default function PiqueLanding() {
   }
 
   const nomePique = pique?.nome || `Mesa ${pique?.numero}`;
+  const reservaAtivaHoje =
+    pique?.status === "reservado" &&
+    !!pique.reserva &&
+    pique.reserva.data === getBrasiliaDateKey();
+  const reservaFutura =
+    pique?.status === "reservado" &&
+    !!pique.reserva &&
+    pique.reserva.data !== getBrasiliaDateKey();
+
+  const liberarReserva = () => {
+    if (!pique?.reserva) return;
+    if (senhaReserva.trim() !== pique.reserva.telefone.trim()) return;
+    sessionStorage.setItem(`reserva-auth-${pique.id}`, senhaReserva.trim());
+    setReservaLiberada(true);
+  };
+
+  if (reservaAtivaHoje && !reservaLiberada) {
+    return (
+      <main className="min-h-dvh flex items-center justify-center px-6"
+        style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}>
+        <div className="glass rounded-3xl p-6 w-full max-w-sm space-y-4">
+          <div className="text-center">
+            <LockKeyhole className="w-8 h-8 text-gold-500 mx-auto mb-2" />
+            <p className="text-forest-500 text-xs uppercase tracking-widest">Reserva ativa</p>
+            <h1 className="font-display text-2xl font-bold gradient-gold-text mt-1">
+              {pique.reserva?.nome}
+            </h1>
+            <p className="text-forest-500 text-sm mt-1">
+              Informe o telefone da reserva para abrir a comanda.
+            </p>
+          </div>
+
+          <input
+            value={senhaReserva}
+            onChange={(e) => setSenhaReserva(e.target.value)}
+            placeholder="Telefone da reserva"
+            className="input-field"
+          />
+
+          <button onClick={liberarReserva} className="btn-gold w-full py-3 rounded-2xl">
+            Entrar na reserva
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (reservaFutura) {
+    return (
+      <main className="min-h-dvh flex items-center justify-center px-6"
+        style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}>
+        <div className="glass rounded-3xl p-6 w-full max-w-sm text-center">
+          <LockKeyhole className="w-8 h-8 text-gold-500 mx-auto mb-2" />
+          <p className="text-forest-500 text-xs uppercase tracking-widest">Mesa reservada</p>
+          <h1 className="font-display text-2xl font-bold gradient-gold-text mt-1">
+            {pique?.reserva?.nome}
+          </h1>
+          <p className="text-forest-500 text-sm mt-2">
+            Esta reserva abre em {pique?.reserva?.data}.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
