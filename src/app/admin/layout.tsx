@@ -7,12 +7,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, LayoutDashboard, Package, Tags, MapPin, BarChart2,
   LogOut, Menu, X, Tag, Banknote, Settings,
-  ChefHat, Moon, Sun,
+  ChefHat, Moon, Sun, UserRound,
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { isPedidoAberto } from "@/lib/comanda";
+import { bootstrapAdminIfNeeded, canAccessAdmin, fetchUsuario } from "@/lib/usuarios";
 import type { Pedido } from "@/types";
 import toast from "react-hot-toast";
 
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: "/admin/piques",        label: "Mesas",         icon: MapPin },
   { href: "/admin/promocoes",     label: "Promoções",     icon: Tag },
   { href: "/admin/relatorios",    label: "Relatórios",    icon: BarChart2 },
+  { href: "/admin/atendentes",    label: "Atendentes",    icon: UserRound },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 
@@ -67,11 +69,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user && !pathname.includes("/login")) {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (pathname.includes("/login")) {
+        setAuthed(user ? true : false);
+        return;
+      }
+
+      if (!user) {
+        setAuthed(false);
         router.replace("/admin/login");
-      } else {
-        setAuthed(!!user);
+        return;
+      }
+
+      try {
+        let profile = await fetchUsuario(user.uid);
+        if (!profile) {
+          profile = await bootstrapAdminIfNeeded(user.uid, user.email);
+        }
+        if (!canAccessAdmin(profile)) {
+          await signOut(auth);
+          setAuthed(false);
+          toast.error("Esta conta não tem acesso ao painel administrativo.");
+          router.replace("/admin/login");
+          return;
+        }
+        setAuthed(true);
+      } catch {
+        await signOut(auth);
+        setAuthed(false);
+        toast.error("Não foi possível validar seu perfil de administrador.");
+        router.replace("/admin/login");
       }
     });
     return unsub;

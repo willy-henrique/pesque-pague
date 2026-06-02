@@ -28,6 +28,20 @@ NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
 
 Essa variável é usada para gerar os QR Codes das mesas com o link público correto.
 
+### Cadastro de atendentes (painel admin)
+
+Para criar login/senha de atendentes pelo ERP, adicione a chave de service account do Firebase (JSON em uma linha):
+
+```env
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+```
+
+No Firebase Console: **Configurações do projeto → Contas de serviço → Gerar nova chave privada**.
+
+**Primeiro administrador:** faça login no `/admin` com o usuário já criado no Firebase Authentication. Se a coleção `usuarios` estiver vazia, esse usuário vira administrador automaticamente.
+
+**Atendentes:** em `/admin/atendentes`, cadastre nome, e-mail e senha. Eles entram em `/atendente/login`.
+
 ## Rotas principais
 
 - `/app`: seleção de mesa para cliente.

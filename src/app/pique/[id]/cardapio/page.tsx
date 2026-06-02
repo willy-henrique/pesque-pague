@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, ShoppingCart, Plus, Minus, ChevronLeft, Search, X, Receipt, Zap,
@@ -9,13 +9,24 @@ import {
 import Image from "next/image";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { useCart } from "@/store/cart";
+import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
+import { withModoAtendente } from "@/lib/atendente";
 import { formatCurrency } from "@/lib/utils";
 import type { Produto, Categoria, Promocao } from "@/types";
 
 export default function Cardapio() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
   const cart    = useCart();
+
+  const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
+  const carrinhoHref = withModoAtendente(`/pique/${id}/carrinho`);
+
+  const voltar = () => {
+    if (modoAtendente) router.push(comandaHref);
+    else router.back();
+  };
 
   const [catAtiva, setCatAtiva] = useState<string>("todas");
   const [busca, setBusca]       = useState("");
@@ -52,12 +63,20 @@ export default function Cardapio() {
 
   const cartCount = cart.count();
 
+  if (modoAtendente && !authReady) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
+        <p className="text-forest-500 text-sm">Verificando acesso...</p>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 py-3 max-w-xl mx-auto">
-          <button onClick={() => router.back()} className="btn-ghost p-2 rounded-xl">
+          <button type="button" onClick={voltar} className="btn-ghost p-2 rounded-xl" aria-label="Voltar">
             <ChevronLeft className="w-5 h-5" />
           </button>
 
@@ -94,7 +113,7 @@ export default function Cardapio() {
           </button>
 
           <button
-            onClick={() => router.push(`/pique/${id}/comanda`)}
+            onClick={() => router.push(comandaHref)}
             className="btn-ghost px-3 py-2 rounded-xl text-sm"
             title="Minha Comanda"
           >
@@ -102,7 +121,7 @@ export default function Cardapio() {
           </button>
 
           <button
-            onClick={() => router.push(`/pique/${id}/carrinho`)}
+            onClick={() => router.push(carrinhoHref)}
             className="relative btn-gold px-3 py-2 rounded-xl text-sm"
           >
             <ShoppingCart className="w-5 h-5" />
@@ -191,7 +210,7 @@ export default function Cardapio() {
           >
             <div className="glass rounded-2xl p-1">
               <button
-                onClick={() => router.push(`/pique/${id}/carrinho`)}
+                onClick={() => router.push(carrinhoHref)}
                 className="btn-gold w-full py-3.5 rounded-xl text-base"
               >
                 <ShoppingCart className="w-5 h-5" />

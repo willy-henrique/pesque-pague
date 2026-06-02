@@ -85,6 +85,17 @@ export interface Config {
   modoManutencao: boolean;
 }
 
+export type UserRole = "admin" | "atendente";
+
+export interface Usuario {
+  id: string;
+  nome: string;
+  email: string;
+  role: UserRole;
+  ativo: boolean;
+  criadoEm: Timestamp;
+}
+
 export interface FechamentoCaixa {
   id: string;
   data: string;           // "2026-05-26"

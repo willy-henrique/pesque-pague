@@ -1,12 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardPlus, Fish, Receipt, UserRound } from "lucide-react";
+import { ClipboardPlus, Fish, LogOut, Receipt, UserRound } from "lucide-react";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useRequireAtendente } from "@/hooks/useRequireAtendente";
+import { auth } from "@/lib/firebase";
+import { withModoAtendente } from "@/lib/atendente";
 import type { Pique } from "@/types";
+import toast from "react-hot-toast";
 
 export default function AtendentePage() {
+  const router = useRouter();
+  const { usuario } = useRequireAtendente();
   const { data: piques, loading } = useCollection<Pique>("piques", [orderBy("numero", "asc")]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    toast.success("Sessão encerrada.");
+    router.replace("/atendente/login");
+  };
 
   const mesasDisponiveis = piques.filter(
     (p) => p.ativo && (p.status ?? "livre") !== "bloqueado"
@@ -23,10 +37,21 @@ export default function AtendentePage() {
             <div className="w-12 h-12 rounded-xl bg-forest-700 flex items-center justify-center">
               <UserRound className="w-6 h-6 text-gold-500" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-forest-400 text-xs uppercase tracking-widest">Aplicativo Web</p>
               <h1 className="font-display text-2xl font-bold gradient-gold-text">Atendente</h1>
+              {usuario && (
+                <p className="text-forest-500 text-xs truncate mt-0.5">{usuario.nome}</p>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn-ghost p-2.5 rounded-xl shrink-0"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
           <p className="text-forest-300 text-sm mt-4">
             Se o cliente pedir direto ao atendente, selecione a mesa e lance o pedido por aqui.
@@ -67,14 +92,14 @@ export default function AtendentePage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    href={`/pique/${mesa.id}/cardapio`}
+                    href={withModoAtendente(`/pique/${mesa.id}/cardapio`)}
                     className="btn-gold py-2.5 rounded-xl text-sm"
                   >
                     <ClipboardPlus className="w-4 h-4" />
                     Novo pedido
                   </Link>
                   <Link
-                    href={`/pique/${mesa.id}/comanda`}
+                    href={withModoAtendente(`/pique/${mesa.id}/comanda`)}
                     className="btn-ghost py-2.5 rounded-xl text-sm"
                   >
                     <Receipt className="w-4 h-4" />

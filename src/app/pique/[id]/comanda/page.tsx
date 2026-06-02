@@ -2,16 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet, XCircle,
-  ChevronRight, Receipt, AlertCircle,
+  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote,
 } from "lucide-react";
 import {
   collection, query, where, onSnapshot,
   doc, getDoc, serverTimestamp, updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { withModoAtendente } from "@/lib/atendente";
+import { getComandaDisplayId } from "@/lib/comanda";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { canCancelOrder, formatCurrency, formatTime, isBeforeBrasiliaDay } from "@/lib/utils";
 import type { Pedido, OrderStatus } from "@/types";
 import { STATUS_LABELS } from "@/types";
@@ -38,12 +42,17 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
 export default function ComandaDoDia() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [piqueNome, setPiqueNome]   = useState<string>("");
   const [pedidos, setPedidos]       = useState<Pedido[]>([]);
   const [loading, setLoading]       = useState(true);
   const [abertos, setAbertos]       = useState<Set<string>>(new Set());
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+  const [confirmandoPagamento, setConfirmandoPagamento] = useState(false);
+
+  const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
 
   // Carrega nome da mesa
   useEffect(() => {
@@ -83,7 +92,7 @@ export default function ComandaDoDia() {
   }, [id]);
 
   const totalGeral = pedidos.reduce((s, p) => s + p.total, 0);
-  const comandaId = getComandaId(id, pedidos);
+  const comandaId = getComandaDisplayId(id, pedidos);
   const todosEntregues = pedidos.length > 0 && pedidos.every(
     (p) => p.status === "entregue"
   );
@@ -120,30 +129,82 @@ export default function ComandaDoDia() {
     }
   };
 
+  const confirmarPagamento = () => {
+    if (pedidos.length === 0) return;
+    confirm({
+      title: "Confirmar pagamento?",
+      description: `Registrar pagamento de ${formatCurrency(totalGeral)} em ${piqueNome} e fechar a comanda? A mesa será liberada.`,
+      confirmLabel: "Confirmar pagamento",
+      variant: "default",
+      onConfirm: async () => {
+        setConfirmandoPagamento(true);
+        try {
+          await Promise.all([
+            ...pedidos.map((p) =>
+              updateDoc(doc(db, "pedidos", p.id), {
+                status: "pago",
+                atualizadoEm: serverTimestamp(),
+              })
+            ),
+            updateDoc(doc(db, "piques", id), { status: "livre" }),
+          ]);
+          toast.success("Pagamento confirmado. Comanda fechada.");
+          router.push("/atendente");
+        } catch {
+          toast.error("Não foi possível confirmar o pagamento. Tente no caixa do ERP.");
+        } finally {
+          setConfirmandoPagamento(false);
+        }
+      },
+    });
+  };
+
+  if (modoAtendente && !authReady) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
+        <p className="text-forest-500 text-sm">Verificando acesso...</p>
+      </div>
+    );
+  }
+
   return (
     <main
       className="min-h-dvh flex flex-col"
       style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 70%)" }}
     >
       {/* Header */}
-      <header className="glass border-b border-white/[0.06] sticky top-0 z-40">
-        <div className="max-w-xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-forest-700 flex items-center justify-center shrink-0">
-            <Fish className="w-5 h-5 text-gold-500" />
-          </div>
+      <header className="glass border-b border-forest-200/80 sticky top-0 z-40">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-2">
+          {modoAtendente ? (
+            <button
+              type="button"
+              onClick={() => router.push("/atendente")}
+              className="btn-ghost p-2 rounded-xl shrink-0"
+              aria-label="Voltar para mesas"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-forest-700 flex items-center justify-center shrink-0">
+              <Fish className="w-5 h-5 text-gold-500" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-forest-400 text-xs">Comanda aberta</p>
-            <h1 className="font-display font-bold text-gold-400 truncate">
+            <p className="text-forest-500 text-xs">
+              {modoAtendente ? "Atendente · Comanda" : "Comanda aberta"}
+            </p>
+            <h1 className="font-bold text-forest-900 truncate text-base">
               {piqueNome || "Carregando..."}
             </h1>
           </div>
           {comandaId && (
-            <div className="px-2.5 py-1 rounded-lg border border-gold-500/25 bg-gold-500/10 text-[11px] font-semibold text-gold-500 whitespace-nowrap">
-              Comanda #{comandaId}
+            <div className="px-2.5 py-1 rounded-lg border border-gold-500/25 bg-gold-500/10 text-[11px] font-semibold text-gold-600 whitespace-nowrap">
+              #{comandaId}
             </div>
           )}
           <button
-            onClick={() => router.push(`/pique/${id}/cardapio`)}
+            type="button"
+            onClick={() => router.push(cardapioHref)}
             className="btn-gold px-3 py-2 rounded-xl text-sm shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -222,16 +283,35 @@ export default function ComandaDoDia() {
               <Receipt className="w-7 h-7 text-forest-600" />
             </div>
             <div>
-              <p className="text-forest-800 font-semibold">Comanda fechada</p>
-              <p className="text-forest-500 text-sm mt-1">Não há pedidos aguardando pagamento.</p>
+              <p className="text-forest-800 font-semibold">
+                {modoAtendente ? "Sem pedidos em aberto" : "Comanda fechada"}
+              </p>
+              <p className="text-forest-500 text-sm mt-1">
+                {modoAtendente
+                  ? "Lance um pedido ou volte para escolher outra mesa."
+                  : "Não há pedidos aguardando pagamento."}
+              </p>
             </div>
-            <button
-              onClick={() => router.push(`/pique/${id}/cardapio`)}
-              className="btn-gold px-6 py-3 rounded-2xl"
-            >
-              <Fish className="w-4 h-4" />
-              Ver Cardápio
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+              {modoAtendente && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/atendente")}
+                  className="btn-ghost px-6 py-3 rounded-2xl w-full border border-forest-200"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Voltar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => router.push(cardapioHref)}
+                className="btn-gold px-6 py-3 rounded-2xl w-full"
+              >
+                <Fish className="w-4 h-4" />
+                Novo pedido
+              </button>
+            </div>
           </motion.div>
         ) : (
           <div className="space-y-3">
@@ -371,46 +451,64 @@ export default function ComandaDoDia() {
         )}
       </div>
 
-      {/* Botão novo pedido fixo */}
+      {/* Rodapé fixo */}
       {!loading && pedidos.length > 0 && (
-        <div className="sticky bottom-0 p-4 max-w-xl mx-auto w-full">
-          <div className="glass rounded-2xl p-1">
-            <button
-              onClick={() => router.push(`/pique/${id}/cardapio`)}
-              className="btn-gold w-full py-3.5 rounded-xl text-base"
-            >
-              <Plus className="w-5 h-5" />
-              Adicionar mais itens
-              <span className="ml-auto text-sm opacity-70">
-                Total: {formatCurrency(totalGeral)}
-              </span>
-            </button>
-          </div>
+        <div className="sticky bottom-0 p-4 max-w-xl mx-auto w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {modoAtendente ? (
+            <div className="glass rounded-2xl p-2 space-y-2 border border-forest-200">
+              <div className="flex items-center justify-between px-2 pt-1">
+                <span className="text-forest-500 text-xs">Total a receber</span>
+                <span className="font-bold text-lg text-gold-700">{formatCurrency(totalGeral)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push("/atendente")}
+                  className="btn-ghost py-3 rounded-xl text-sm border border-forest-200"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarPagamento}
+                  disabled={confirmandoPagamento}
+                  className="btn-gold py-3 rounded-xl text-sm disabled:opacity-60"
+                >
+                  <Banknote className="w-4 h-4" />
+                  {confirmandoPagamento ? "..." : "Confirmar pagamento"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push(cardapioHref)}
+                className="w-full py-2.5 rounded-xl text-sm text-forest-600 hover:text-forest-900 transition-colors"
+              >
+                <Plus className="w-4 h-4 inline mr-1" />
+                Adicionar itens
+              </button>
+            </div>
+          ) : (
+            <div className="glass rounded-2xl p-1">
+              <button
+                type="button"
+                onClick={() => router.push(cardapioHref)}
+                className="btn-gold w-full py-3.5 rounded-xl text-base"
+              >
+                <Plus className="w-5 h-5" />
+                Adicionar mais itens
+                <span className="ml-auto text-sm opacity-70">
+                  Total: {formatCurrency(totalGeral)}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {ConfirmDialog}
     </main>
   );
-}
-
-function getComandaId(piqueId: string, pedidos: Pedido[]) {
-  if (pedidos.length === 0) return "";
-
-  const maisAntigo = pedidos.reduce((acc, atual) => {
-    if (!acc.criadoEm || !atual.criadoEm) return acc;
-    return atual.criadoEm.toDate().getTime() < acc.criadoEm.toDate().getTime() ? atual : acc;
-  }, pedidos[0]);
-
-  const base = `${piqueId}-${maisAntigo.id}`;
-  const numero = toNumericComanda(base);
-  return String(numero).padStart(4, "0");
-}
-
-function toNumericComanda(seed: string) {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return (hash % 9999) + 1;
 }
 
 function ComandaSkeleton() {

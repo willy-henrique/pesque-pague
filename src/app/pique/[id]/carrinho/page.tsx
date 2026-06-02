@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Minus, Plus, Trash2, ShoppingCart, Fish, MessageSquare, Receipt } from "lucide-react";
 import Image from "next/image";
@@ -9,17 +9,31 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/fi
 import toast from "react-hot-toast";
 import { useCart } from "@/store/cart";
 import { db } from "@/lib/firebase";
+import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
+import { withModoAtendente } from "@/lib/atendente";
 import { formatCurrency } from "@/lib/utils";
 
 export default function Carrinho() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
   const cart    = useCart();
+
+  const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
+  const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
   const [obsAberta, setObsAberta] = useState<string | null>(null);
   const [obsGeral, setObsGeral] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   const isEmpty = cart.items.length === 0;
+
+  if (modoAtendente && !authReady) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
+        <p className="text-forest-500 text-sm">Verificando acesso...</p>
+      </div>
+    );
+  }
 
   const handleEnviarPedido = async () => {
     if (isEmpty || enviando) return;
@@ -45,7 +59,7 @@ export default function Carrinho() {
 
       cart.clearCart();
       toast.success("Pedido enviado para a cozinha!");
-      router.replace(`/pique/${id}/cardapio`);
+      router.replace(modoAtendente ? comandaHref : cardapioHref);
     } catch {
       toast.error("Erro ao enviar pedido. Tente novamente.");
       setEnviando(false);
@@ -57,7 +71,12 @@ export default function Carrinho() {
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 py-4 max-w-xl mx-auto">
-          <button onClick={() => router.back()} className="btn-ghost p-2 rounded-xl">
+          <button
+            type="button"
+            onClick={() => router.push(cardapioHref)}
+            className="btn-ghost p-2 rounded-xl"
+            aria-label="Voltar"
+          >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
@@ -67,7 +86,7 @@ export default function Carrinho() {
             </p>
           </div>
           <button
-            onClick={() => router.push(`/pique/${id}/comanda`)}
+            onClick={() => router.push(comandaHref)}
             className="btn-ghost px-3 py-2 rounded-xl text-sm"
             title="Minha Comanda"
           >
@@ -101,7 +120,7 @@ export default function Carrinho() {
                 <p className="text-forest-400 text-sm">Adicione itens do cardápio para continuar.</p>
               </div>
               <button
-                onClick={() => router.push(`/pique/${id}/cardapio`)}
+                onClick={() => router.push(cardapioHref)}
                 className="btn-gold px-6 py-3 rounded-2xl"
               >
                 <Fish className="w-4 h-4" />

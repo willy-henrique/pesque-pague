@@ -2,24 +2,83 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Leitura pública (portal do cliente) ────────────────
-    match /piques/{id}      { allow read: if true; }
-    match /categorias/{id}  { allow read: if true; }
-    match /produtos/{id}    { allow read: if true; }
-    match /config/{id}      { allow read: if true; }
-    match /promocoes/{id}   { allow read: if true; allow write: if request.auth != null; }
-
-    // ── Pedidos ─────────────────────────────────────────────
-    match /pedidos/{id} {
-      allow create: if true;             // cliente cria sem login
-      allow read:   if true;             // cliente lê a própria comanda
-      allow update: if request.auth != null; // só gerente avança status
-      allow delete: if request.auth != null;
+    function usuarioDoc() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
     }
 
-    // ── Admin (tudo exige login) ─────────────────────────────
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && usuarioDoc().data.role == 'admin'
+        && usuarioDoc().data.ativo == true;
+    }
+
+    function isAtendente() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && usuarioDoc().data.role == 'atendente'
+        && usuarioDoc().data.ativo == true;
+    }
+
+    function isClienteCancelandoPedido() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm'])
+        && request.resource.data.status == 'cancelado'
+        && resource.data.status == 'novo';
+    }
+
+    function isAtendenteConfirmandoPagamento() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm'])
+        && request.resource.data.status == 'pago'
+        && resource.data.status in ['novo', 'em_preparo', 'saiu', 'entregue'];
+    }
+
+    function isClienteAtualizandoStatusMesa() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['ocupado', 'livre'];
+    }
+
+    function isAtendenteLiberandoMesa() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'livre';
+    }
+
+    // ── Usuários (admin / atendente) ───────────────────────
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && !exists(/databases/$(database)/documents/usuarios/$(uid))
+        && request.resource.data.role == 'admin'
+        && request.resource.data.ativo == true;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Leitura pública (portal do cliente) ────────────────
+    match /categorias/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /produtos/{id}    { allow read: if true; allow write: if isAdmin(); }
+    match /config/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /promocoes/{id}   { allow read: if true; allow write: if isAdmin(); }
+
+    match /pedidos/{id} {
+      allow create: if true;
+      allow read:   if true;
+      allow update: if isAdmin()
+        || (isAtendente() && isAtendenteConfirmandoPagamento())
+        || isClienteCancelandoPedido();
+      allow delete: if isAdmin();
+    }
+
+    match /piques/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isAtendente() && isAtendenteLiberandoMesa())
+        || isClienteAtualizandoStatusMesa();
+    }
+
+    // ── Demais coleções do ERP ─────────────────────────────
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
   }
 }
