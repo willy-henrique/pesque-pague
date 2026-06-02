@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Fish, Send, CheckCircle2, PartyPopper } from "lucide-react";
+import { ChevronLeft, Fish, Send, CheckCircle2 } from "lucide-react";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCart } from "@/store/cart";
@@ -17,14 +17,13 @@ export default function Confirmar() {
 
   const [obsGeral, setObsGeral]   = useState("");
   const [loading, setLoading]     = useState(false);
-  const [pedidoId, setPedidoId]   = useState<string | null>(null);
 
   const handleEnviar = async () => {
     if (cart.items.length === 0) return;
 
     setLoading(true);
     try {
-      const ref = await addDoc(collection(db, "pedidos"), {
+      await addDoc(collection(db, "pedidos"), {
         piqueId:         cart.piqueId ?? id,
         piqueNome:       cart.piqueNome ?? `Mesa ${id}`,
         itens:           cart.items,
@@ -35,84 +34,27 @@ export default function Confirmar() {
         atualizadoEm:    serverTimestamp(),
       });
 
-      await updateDoc(doc(db, "piques", cart.piqueId ?? id), {
-        status: "ocupado",
-      });
+      try {
+        await updateDoc(doc(db, "piques", cart.piqueId ?? id), {
+          status: "ocupado",
+        });
+      } catch {
+        // O cliente pode não ter permissão para atualizar a mesa.
+        // Não bloqueia o fluxo: pedido já foi registrado com sucesso.
+      }
 
       cart.clearCart();
-      setPedidoId(ref.id);
+      toast.success("Pedido enviado! Voltando ao cardápio...");
+      router.replace(`/pique/${id}/cardapio`);
     } catch {
       toast.error("Erro ao enviar pedido. Tente novamente.");
       setLoading(false);
     }
   };
 
-  if (cart.items.length === 0 && !pedidoId) {
+  if (cart.items.length === 0) {
     router.replace(`/pique/${id}/cardapio`);
     return null;
-  }
-
-  // Tela de sucesso
-  if (pedidoId) {
-    return (
-      <main
-        className="min-h-dvh flex flex-col items-center justify-center px-6"
-        style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 70%)" }}
-      >
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", damping: 14, stiffness: 200 }}
-          className="flex flex-col items-center gap-6 text-center max-w-sm w-full"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: [0, 1.2, 1] }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="w-24 h-24 rounded-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #2d6a4f, #1a3a2a)", boxShadow: "0 0 60px rgba(45,106,79,0.4)" }}
-          >
-            <PartyPopper className="w-10 h-10 text-gold-500" />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <h1 className="font-display text-3xl font-bold gradient-gold-text mb-2">
-              Pedido enviado!
-            </h1>
-            <p className="text-forest-300 text-sm leading-relaxed">
-              Seu pedido foi recebido e já está sendo preparado.
-              <br />
-              Acompanhe o status em tempo real.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="w-full flex flex-col gap-3"
-          >
-            <button
-              onClick={() => router.push(`/pedido/${pedidoId}`)}
-              className="btn-gold w-full py-4 rounded-2xl text-base"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              Acompanhar pedido
-            </button>
-            <button
-              onClick={() => router.push(`/pique/${id}/comanda`)}
-              className="btn-ghost w-full py-3 rounded-2xl text-sm"
-            >
-              Ver comanda do dia
-            </button>
-          </motion.div>
-        </motion.div>
-      </main>
-    );
   }
 
   return (
