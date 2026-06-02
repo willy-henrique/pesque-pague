@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/utils";
 export default function Carrinho() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
-  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
+  const { modoAtendente } = useModoAtendenteAuth();
   const cart    = useCart();
 
   const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
@@ -26,14 +26,6 @@ export default function Carrinho() {
   const [enviando, setEnviando] = useState(false);
 
   const isEmpty = cart.items.length === 0;
-
-  if (modoAtendente && !authReady) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
-        <p className="text-forest-500 text-sm">Verificando acesso...</p>
-      </div>
-    );
-  }
 
   const handleEnviarPedido = async () => {
     if (isEmpty || enviando) return;

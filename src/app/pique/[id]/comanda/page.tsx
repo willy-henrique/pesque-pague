@@ -42,7 +42,7 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
 export default function ComandaDoDia() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
-  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
+  const { modoAtendente } = useModoAtendenteAuth();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [piqueNome, setPiqueNome]   = useState<string>("");
@@ -158,14 +158,6 @@ export default function ComandaDoDia() {
       },
     });
   };
-
-  if (modoAtendente && !authReady) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
-        <p className="text-forest-500 text-sm">Verificando acesso...</p>
-      </div>
-    );
-  }
 
   return (
     <main

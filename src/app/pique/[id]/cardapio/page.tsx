@@ -17,7 +17,7 @@ import type { Produto, Categoria, Promocao } from "@/types";
 export default function Cardapio() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
-  const { modoAtendente, ready: authReady } = useModoAtendenteAuth();
+  const { modoAtendente } = useModoAtendenteAuth();
   const cart    = useCart();
 
   const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
@@ -62,14 +62,6 @@ export default function Cardapio() {
   }, [todosProdutos, catAtiva, busca]);
 
   const cartCount = cart.count();
-
-  if (modoAtendente && !authReady) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-forest-50">
-        <p className="text-forest-500 text-sm">Verificando acesso...</p>
-      </div>
-    );
-  }
 
   return (
     <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
