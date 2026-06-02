@@ -53,6 +53,12 @@ export function isBeforeBrasiliaDay(date: Date, reference = new Date()) {
   return getBrasiliaDateKey(date) < getBrasiliaDateKey(reference);
 }
 
+export const ORDER_CANCEL_WINDOW_MS = 4 * 60 * 1000;
+
+export function canCancelOrder(createdAt: Date, now = new Date()) {
+  return now.getTime() - createdAt.getTime() <= ORDER_CANCEL_WINDOW_MS;
+}
+
 export function getRelativeTime(date: Date) {
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);

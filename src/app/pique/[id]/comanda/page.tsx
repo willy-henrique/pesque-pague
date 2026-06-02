@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet,
+  Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet, XCircle,
   ChevronRight, Receipt, AlertCircle,
 } from "lucide-react";
 import {
   collection, query, where, onSnapshot,
-  doc, getDoc,
+  doc, getDoc, serverTimestamp, updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { formatCurrency, formatTime, isBeforeBrasiliaDay } from "@/lib/utils";
+import { canCancelOrder, formatCurrency, formatTime, isBeforeBrasiliaDay } from "@/lib/utils";
 import type { Pedido, OrderStatus } from "@/types";
 import { STATUS_LABELS } from "@/types";
+import toast from "react-hot-toast";
 
 const STATUS_ICON: Record<OrderStatus, React.ElementType> = {
   novo:       Clock,
@@ -22,6 +23,7 @@ const STATUS_ICON: Record<OrderStatus, React.ElementType> = {
   saiu:       Bike,
   entregue:   CheckCircle2,
   pago:       Wallet,
+  cancelado:  XCircle,
 };
 
 const STATUS_CLASS: Record<OrderStatus, string> = {
@@ -30,6 +32,7 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
   saiu:       "status-saiu",
   entregue:   "status-entregue",
   pago:       "status-pago",
+  cancelado:  "bg-red-500/10 text-red-500 border-red-500/20",
 };
 
 export default function ComandaDoDia() {
@@ -40,6 +43,7 @@ export default function ComandaDoDia() {
   const [pedidos, setPedidos]       = useState<Pedido[]>([]);
   const [loading, setLoading]       = useState(true);
   const [abertos, setAbertos]       = useState<Set<string>>(new Set());
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
 
   // Carrega nome da mesa
   useEffect(() => {
@@ -64,7 +68,7 @@ export default function ComandaDoDia() {
       (snap) => {
         const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Pedido));
         const abertos = todos
-          .filter((p) => p.status !== "pago")
+          .filter((p) => p.status !== "pago" && p.status !== "cancelado")
           .sort((a, b) => b.criadoEm.toDate().getTime() - a.criadoEm.toDate().getTime());
         setPedidos(abertos);
         setLoading(false);
@@ -79,6 +83,7 @@ export default function ComandaDoDia() {
   }, [id]);
 
   const totalGeral = pedidos.reduce((s, p) => s + p.total, 0);
+  const comandaId = getComandaId(id, pedidos);
   const todosEntregues = pedidos.length > 0 && pedidos.every(
     (p) => p.status === "entregue"
   );
@@ -93,10 +98,32 @@ export default function ComandaDoDia() {
     });
   };
 
+  const cancelarPedido = async (pedido: Pedido) => {
+    if (!pedido.criadoEm) return;
+    if (pedido.status !== "novo") return;
+    if (!canCancelOrder(pedido.criadoEm.toDate())) {
+      toast.error("Prazo de cancelamento expirado (4 minutos).");
+      return;
+    }
+
+    setCancelandoId(pedido.id);
+    try {
+      await updateDoc(doc(db, "pedidos", pedido.id), {
+        status: "cancelado",
+        atualizadoEm: serverTimestamp(),
+      });
+      toast.success("Pedido cancelado.");
+    } catch {
+      toast.error("Não foi possível cancelar o pedido.");
+    } finally {
+      setCancelandoId(null);
+    }
+  };
+
   return (
     <main
       className="min-h-dvh flex flex-col"
-      style={{ background: "radial-gradient(ellipse at top, #142b1e 0%, #061208 70%)" }}
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 70%)" }}
     >
       {/* Header */}
       <header className="glass border-b border-white/[0.06] sticky top-0 z-40">
@@ -110,6 +137,11 @@ export default function ComandaDoDia() {
               {piqueNome || "Carregando..."}
             </h1>
           </div>
+          {comandaId && (
+            <div className="px-2.5 py-1 rounded-lg border border-gold-500/25 bg-gold-500/10 text-[11px] font-semibold text-gold-500 whitespace-nowrap">
+              Comanda #{comandaId}
+            </div>
+          )}
           <button
             onClick={() => router.push(`/pique/${id}/cardapio`)}
             className="btn-gold px-3 py-2 rounded-xl text-sm shrink-0"
@@ -169,7 +201,7 @@ export default function ComandaDoDia() {
             style={{ animation: "pulseGold 2s ease-in-out infinite" }}
           >
             <Wallet className="w-7 h-7 text-gold-500 mx-auto mb-2" />
-            <p className="text-forest-100 font-semibold">Tudo entregue!</p>
+            <p className="text-forest-900 font-semibold">Tudo entregue!</p>
             <p className="text-forest-400 text-sm mt-0.5">
               Dirija-se ao caixa para pagar{" "}
               <span className="gradient-gold-text font-bold">{formatCurrency(totalGeral)}</span>
@@ -190,7 +222,7 @@ export default function ComandaDoDia() {
               <Receipt className="w-7 h-7 text-forest-600" />
             </div>
             <div>
-              <p className="text-forest-200 font-semibold">Comanda fechada</p>
+              <p className="text-forest-800 font-semibold">Comanda fechada</p>
               <p className="text-forest-500 text-sm mt-1">Não há pedidos aguardando pagamento.</p>
             </div>
             <button
@@ -210,6 +242,10 @@ export default function ComandaDoDia() {
               {pedidos.map((pedido, i) => {
                 const Icon  = STATUS_ICON[pedido.status];
                 const open  = abertos.has(pedido.id);
+                const podeCancelar =
+                  pedido.status === "novo" &&
+                  !!pedido.criadoEm &&
+                  canCancelOrder(pedido.criadoEm.toDate());
 
                 return (
                   <motion.div
@@ -243,7 +279,7 @@ export default function ComandaDoDia() {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-forest-100 font-semibold text-sm">
+                            <span className="text-forest-900 font-semibold text-sm">
                               #{pedido.id.slice(-4).toUpperCase()}
                             </span>
                             <span className={`badge ${STATUS_CLASS[pedido.status]}`}>
@@ -265,14 +301,28 @@ export default function ComandaDoDia() {
                         />
                       </button>
 
-                      {/* Link rastreamento */}
-                      <button
-                        onClick={() => router.push(`/pedido/${pedido.id}`)}
-                        className="btn-ghost p-2 rounded-lg shrink-0 border border-white/[0.06]"
-                        title="Acompanhar pedido"
-                      >
-                        <Receipt className="w-4 h-4 text-gold-500" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {podeCancelar && (
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              cancelarPedido(pedido);
+                            }}
+                            disabled={cancelandoId === pedido.id}
+                            className="btn-ghost px-2.5 py-2 rounded-lg text-xs text-red-500 border border-red-500/20 disabled:opacity-60"
+                            title="Cancelar pedido (até 4 minutos)"
+                          >
+                            {cancelandoId === pedido.id ? "..." : "Cancelar"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => router.push(`/pedido/${pedido.id}`)}
+                          className="btn-ghost p-2 rounded-lg shrink-0 border border-white/[0.06]"
+                          title="Acompanhar pedido"
+                        >
+                          <Receipt className="w-4 h-4 text-gold-500" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Itens expandidos */}
@@ -292,7 +342,7 @@ export default function ComandaDoDia() {
                                   {item.quantidade}×
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                  <span className="text-forest-200 text-sm">{item.nome}</span>
+                                  <span className="text-forest-800 text-sm">{item.nome}</span>
                                   {item.obs && (
                                     <p className="text-forest-600 text-xs italic">{item.obs}</p>
                                   )}
@@ -340,6 +390,27 @@ export default function ComandaDoDia() {
       )}
     </main>
   );
+}
+
+function getComandaId(piqueId: string, pedidos: Pedido[]) {
+  if (pedidos.length === 0) return "";
+
+  const maisAntigo = pedidos.reduce((acc, atual) => {
+    if (!acc.criadoEm || !atual.criadoEm) return acc;
+    return atual.criadoEm.toDate().getTime() < acc.criadoEm.toDate().getTime() ? atual : acc;
+  }, pedidos[0]);
+
+  const base = `${piqueId}-${maisAntigo.id}`;
+  const numero = toNumericComanda(base);
+  return String(numero).padStart(4, "0");
+}
+
+function toNumericComanda(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return (hash % 9999) + 1;
 }
 
 function ComandaSkeleton() {

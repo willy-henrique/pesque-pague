@@ -86,7 +86,7 @@ export default function Configuracoes() {
             <Power className={`w-6 h-6 ${form.modoManutencao ? "text-red-400" : "text-forest-300"}`} />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-forest-100 text-sm">Status do estabelecimento</p>
+            <p className="font-semibold text-forest-900 text-sm">Status do estabelecimento</p>
             <div className="flex items-center gap-2 mt-0.5">
               <div className={`w-2 h-2 rounded-full ${form.modoManutencao ? "bg-red-400" : "bg-forest-400 animate-pulse"}`} />
               <p className={`text-xs font-medium ${form.modoManutencao ? "text-red-400" : "text-forest-400"}`}>
@@ -125,7 +125,7 @@ export default function Configuracoes() {
       >
         <div className="flex items-center gap-2 mb-1">
           <Store className="w-4 h-4 text-gold-500" />
-          <h2 className="font-display font-semibold text-forest-100">Informações do estabelecimento</h2>
+          <h2 className="font-display font-semibold text-forest-900">Informações do estabelecimento</h2>
         </div>
 
         <div className="space-y-1">

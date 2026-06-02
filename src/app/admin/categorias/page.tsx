@@ -85,7 +85,7 @@ export default function Categorias() {
                 <GripVertical className="w-4 h-4 text-forest-700 cursor-grab" />
                 <span className="text-2xl w-8 text-center">{cat.icone}</span>
                 <div className="flex-1">
-                  <p className={`font-semibold text-sm ${cat.ativo ? "text-forest-100" : "text-forest-600 line-through"}`}>
+                  <p className={`font-semibold text-sm ${cat.ativo ? "text-forest-900" : "text-forest-600 line-through"}`}>
                     {cat.nome}
                   </p>
                   <p className="text-forest-600 text-xs">Ordem: {cat.ordem}</p>

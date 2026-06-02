@@ -5,7 +5,7 @@ export default function RootPage() {
   return (
     <main
       className="min-h-dvh flex items-center justify-center px-5 py-10"
-      style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 62%)" }}
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
     >
       <div className="w-full max-w-md space-y-8 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -13,7 +13,7 @@ export default function RootPage() {
             <Fish className="w-10 h-10 text-gold-500" />
           </div>
           <div>
-            <p className="text-forest-300 text-sm uppercase tracking-widest font-semibold">
+            <p className="text-forest-600 text-sm uppercase tracking-widest font-semibold">
               WillTech Pesqueiros
             </p>
             <h1 className="font-display text-3xl font-bold gradient-gold-text mt-2">

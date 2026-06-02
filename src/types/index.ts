@@ -5,7 +5,8 @@ export type OrderStatus =
   | "em_preparo"
   | "saiu"
   | "entregue"
-  | "pago";
+  | "pago"
+  | "cancelado";
 
 export interface Categoria {
   id: string;
@@ -98,6 +99,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   saiu:       "Saiu para entrega",
   entregue:   "Entregue",
   pago:       "Pago no caixa",
+  cancelado:  "Cancelado pelo cliente",
 };
 
 export const STATUS_ORDER: OrderStatus[] = [

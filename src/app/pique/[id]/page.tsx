@@ -59,10 +59,10 @@ export default function PiqueLanding() {
     return (
       <div
         className="min-h-dvh flex flex-col items-center justify-center p-8 text-center"
-        style={{ background: "radial-gradient(ellipse at top, #0d1f16 0%, #061208 60%)" }}
+        style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
       >
         <MoonStar className="w-14 h-14 text-forest-600 mb-5" />
-        <h1 className="font-display text-2xl font-bold text-forest-200 mb-2">
+        <h1 className="font-display text-2xl font-bold text-forest-700 mb-2">
           {config?.nomeEstabelecimento ?? "Estabelecimento"}
         </h1>
         <p className="text-forest-400 text-base font-medium mb-1">Estamos fechados no momento</p>
@@ -76,7 +76,7 @@ export default function PiqueLanding() {
       <div className="min-h-dvh flex flex-col items-center justify-center p-8 text-center">
         <Fish className="w-16 h-16 text-forest-500 mb-4 animate-float" />
         <h1 className="font-display text-2xl text-gold-500 mb-2">Mesa não encontrada</h1>
-        <p className="text-forest-300">Verifique o QR Code ou fale com um atendente.</p>
+        <p className="text-forest-600">Verifique o QR Code ou fale com um atendente.</p>
       </div>
     );
   }
@@ -87,13 +87,13 @@ export default function PiqueLanding() {
     <main
       className="min-h-dvh flex flex-col"
       style={{
-        background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 60%)",
+        background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)",
       }}
     >
       {/* Ambient top glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-64 rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(ellipse, rgba(45,106,79,0.25) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse, rgba(14,165,233,0.1) 0%, transparent 70%)" }}
       />
 
       <div className="relative flex flex-col items-center justify-center flex-1 px-6 py-16 gap-10">
@@ -107,14 +107,14 @@ export default function PiqueLanding() {
           <div
             className="w-20 h-20 rounded-2xl flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, #1a3a2a 0%, #2d6a4f 100%)",
-              boxShadow: "0 0 40px rgba(45,106,79,0.35), inset 0 1px 0 rgba(255,255,255,0.1)",
+              background: "linear-gradient(135deg, #0F766E 0%, #0D9488 100%)",
+              boxShadow: "0 0 32px rgba(15,118,110,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
             }}
           >
             <Fish className="w-10 h-10 text-gold-500" />
           </div>
           <div className="text-center">
-            <p className="text-forest-300 text-sm tracking-widest uppercase font-semibold">
+            <p className="text-forest-600 text-sm tracking-widest uppercase font-semibold">
               {config?.nomeEstabelecimento ?? "WillTech Pesqueiros"}
             </p>
           </div>
@@ -129,14 +129,14 @@ export default function PiqueLanding() {
         >
           <div className="flex items-center justify-center gap-2 mb-3">
             <MapPin className="w-4 h-4 text-gold-500" />
-            <span className="text-forest-300 text-sm font-medium tracking-wide uppercase">
+            <span className="text-forest-600 text-sm font-medium tracking-wide uppercase">
               Você está em
             </span>
           </div>
           <h1 className="font-display text-4xl font-bold gradient-gold-text mb-2">
             {nomePique}
           </h1>
-          <p className="text-forest-200 text-sm leading-relaxed">
+          <p className="text-forest-700 text-sm leading-relaxed">
             Faça seu pedido pelo celular e receba direto na sua mesa.
             <br />
             <span className="text-bark-300">Pagamento no caixa ao finalizar.</span>
@@ -174,7 +174,7 @@ export default function PiqueLanding() {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-8 right-8 opacity-10"
         >
-          <Fish className="w-24 h-24 text-forest-300" />
+          <Fish className="w-24 h-24 text-forest-600" />
         </motion.div>
       </div>
     </main>
@@ -184,7 +184,7 @@ export default function PiqueLanding() {
 function LandingSkeleton() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center gap-8 p-8"
-      style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 60%)" }}>
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}>
       <div className="skeleton-pulse w-20 h-20 rounded-2xl" />
       <div className="glass rounded-3xl p-8 w-full max-w-sm space-y-4">
         <div className="skeleton-pulse h-4 w-32 mx-auto rounded" />

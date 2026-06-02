@@ -17,6 +17,7 @@ const STATUS_ICONS: Record<OrderStatus, React.ElementType> = {
   saiu:       Bike,
   entregue:   CheckCircle2,
   pago:       Wallet,
+  cancelado:  CheckCircle2,
 };
 
 export default function RastreamentoPedido() {
@@ -29,7 +30,7 @@ export default function RastreamentoPedido() {
   if (!pedido) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-4 text-center p-8"
-        style={{ background: "#061208" }}>
+        style={{ background: "#F8FAFC" }}>
         <Fish className="w-14 h-14 text-forest-700" />
         <h1 className="font-display text-xl text-forest-300">Pedido não encontrado</h1>
         <p className="text-forest-500 text-sm">Verifique o número do pedido.</p>
@@ -39,12 +40,33 @@ export default function RastreamentoPedido() {
 
   const currentIdx  = STATUS_ORDER.indexOf(pedido.status);
   const isPago      = pedido.status === "pago";
+  const isCancelado = pedido.status === "cancelado";
   const isEntregue  = pedido.status === "entregue" || isPago;
+
+  if (isCancelado) {
+    return (
+      <main className="min-h-dvh flex flex-col items-center justify-center px-6 text-center"
+        style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}>
+        <div className="glass rounded-2xl p-6 max-w-sm w-full">
+          <h1 className="font-display text-2xl font-bold text-red-500">Pedido cancelado</h1>
+          <p className="text-forest-500 text-sm mt-2">
+            Este pedido foi cancelado pelo cliente dentro do prazo permitido.
+          </p>
+          <button
+            onClick={() => router.push(`/pique/${pedido.piqueId}/comanda`)}
+            className="btn-ghost w-full py-3 rounded-xl text-sm mt-4"
+          >
+            Voltar para comanda
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
       className="min-h-dvh flex flex-col"
-      style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 60%)" }}
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
     >
       {/* Header */}
       <header className="glass border-b border-white/[0.06] px-4 py-4">
@@ -70,7 +92,7 @@ export default function RastreamentoPedido() {
       <div className="flex-1 px-4 py-6 max-w-xl mx-auto w-full space-y-5">
         {/* Timeline */}
         <div className="glass rounded-2xl p-5">
-          <h2 className="font-display font-semibold text-forest-100 mb-5">Acompanhamento</h2>
+          <h2 className="font-display font-semibold text-forest-900 mb-5">Acompanhamento</h2>
           <div className="relative">
             {/* Connecting line */}
             <div className="absolute left-5 top-5 bottom-5 w-px bg-forest-800" />
@@ -105,12 +127,12 @@ export default function RastreamentoPedido() {
                       {active ? (
                         <Loader2 className="w-4 h-4 text-forest-950 animate-spin" />
                       ) : (
-                        <Icon className={`w-4 h-4 ${done ? "text-forest-100" : "text-forest-700"}`} />
+                        <Icon className={`w-4 h-4 ${done ? "text-forest-900" : "text-forest-700"}`} />
                       )}
                     </div>
                     <div className="flex-1">
                       <p className={`font-semibold text-sm ${
-                        active ? "text-gold-400" : done ? "text-forest-200" : "text-forest-700"
+                        active ? "text-gold-400" : done ? "text-forest-700" : "text-forest-700"
                       }`}>
                         {STATUS_LABELS[status]}
                       </p>
@@ -131,7 +153,7 @@ export default function RastreamentoPedido() {
         {/* Itens */}
         <div className="glass rounded-2xl overflow-hidden">
           <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="font-display font-semibold text-forest-100">
+            <h2 className="font-display font-semibold text-forest-900">
               {pedido.itens.length} {pedido.itens.length === 1 ? "item" : "itens"}
             </h2>
             <span className="text-forest-400 text-xs">
@@ -143,7 +165,7 @@ export default function RastreamentoPedido() {
               <div key={i} className="flex gap-2 px-4 py-2.5">
                 <span className="text-gold-500 font-bold text-sm">{item.quantidade}×</span>
                 <div className="flex-1">
-                  <span className="text-forest-100 text-sm">{item.nome}</span>
+                  <span className="text-forest-900 text-sm">{item.nome}</span>
                   {item.obs && (
                     <p className="text-forest-500 text-xs italic">{item.obs}</p>
                   )}
@@ -174,13 +196,13 @@ export default function RastreamentoPedido() {
           {isPago ? (
             <>
               <CheckCircle2 className="w-8 h-8 text-forest-400 mx-auto mb-2" />
-              <p className="text-forest-200 font-semibold">Pago! Bom descanso e boa pescaria!</p>
+              <p className="text-forest-700 font-semibold">Pago! Bom descanso e boa pescaria!</p>
               <p className="text-forest-500 text-sm mt-1">Obrigado pela visita.</p>
             </>
           ) : (
             <>
               <Wallet className="w-8 h-8 text-gold-500 mx-auto mb-2" />
-              <p className="text-forest-100 font-semibold">
+              <p className="text-forest-900 font-semibold">
                 Pague no caixa ao encerrar sua pescaria
               </p>
               <p className="gradient-gold-text font-bold text-xl font-display mt-1">
@@ -208,13 +230,14 @@ function getStatusClass(status: OrderStatus) {
     saiu:       "status-saiu",
     entregue:   "status-entregue",
     pago:       "status-pago",
+    cancelado:  "bg-red-500/10 text-red-500 border-red-500/20",
   };
   return map[status];
 }
 
 function TrackingSkeleton() {
   return (
-    <div className="min-h-dvh p-4 space-y-4" style={{ background: "#061208" }}>
+    <div className="min-h-dvh p-4 space-y-4" style={{ background: "#F8FAFC" }}>
       <div className="glass rounded-2xl p-4 flex gap-3">
         <div className="skeleton-pulse w-10 h-10 rounded-xl" />
         <div className="space-y-2 flex-1">

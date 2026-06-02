@@ -15,7 +15,7 @@ export default function AtendentePage() {
   return (
     <main
       className="min-h-dvh px-5 py-8"
-      style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 62%)" }}
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
     >
       <div className="max-w-3xl mx-auto space-y-6">
         <header className="glass rounded-2xl p-5">
@@ -56,7 +56,7 @@ export default function AtendentePage() {
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-forest-100 truncate">
+                    <p className="font-semibold text-forest-900 truncate">
                       {mesa.nome || `Mesa ${mesa.numero}`}
                     </p>
                     <p className="text-forest-500 text-xs">

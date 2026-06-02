@@ -79,7 +79,7 @@ export default function Relatorios() {
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 periodo === p
                   ? "bg-gold-500 text-forest-950"
-                  : "text-forest-400 hover:text-forest-200"
+                  : "text-forest-400 hover:text-forest-700"
               }`}
             >
               {p === "hoje" ? "Hoje" : p === "semana" ? "7 dias" : "Mês"}
@@ -101,7 +101,7 @@ export default function Relatorios() {
         <div className="glass rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-gold-500" />
-            <h2 className="font-display font-semibold text-forest-100">Produtos mais vendidos</h2>
+            <h2 className="font-display font-semibold text-forest-900">Produtos mais vendidos</h2>
           </div>
           <div className="p-4 space-y-3">
             {rankingProdutos.length === 0 ? (
@@ -118,7 +118,7 @@ export default function Relatorios() {
                     className="space-y-1"
                   >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-forest-200 font-medium flex items-center gap-1.5">
+                      <span className="text-forest-700 font-medium flex items-center gap-1.5">
                         {i === 0 && <span className="text-gold-500">🏆</span>}
                         {item.nome}
                       </span>
@@ -133,7 +133,7 @@ export default function Relatorios() {
                         animate={{ width: `${(item.qty / maxQty) * 100}%` }}
                         transition={{ duration: 0.6, delay: i * 0.04 }}
                         className="h-full rounded-full"
-                        style={{ background: "linear-gradient(90deg, #2d6a4f, #f4a522)" }}
+                        style={{ background: "linear-gradient(90deg, #4338ca, #f4a522)" }}
                       />
                     </div>
                   </motion.div>
@@ -147,7 +147,7 @@ export default function Relatorios() {
         <div className="glass rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
             <Fish className="w-4 h-4 text-gold-500" />
-            <h2 className="font-display font-semibold text-forest-100">Mesas por faturamento</h2>
+            <h2 className="font-display font-semibold text-forest-900">Mesas por faturamento</h2>
           </div>
           <div className="divide-y divide-white/[0.05]">
             {rankingMesas.length === 0 ? (
@@ -163,7 +163,7 @@ export default function Relatorios() {
                 >
                   <span className="text-forest-600 text-xs w-4">{i + 1}</span>
                   <Fish className="w-3.5 h-3.5 text-forest-600" />
-                  <span className="flex-1 text-forest-200 text-sm">{pique.nome}</span>
+                  <span className="flex-1 text-forest-700 text-sm">{pique.nome}</span>
                   <span className="text-forest-500 text-xs">{pique.pedidos} pedidos</span>
                   <span className="text-gold-500 font-bold text-sm">{formatCurrency(pique.total)}</span>
                 </motion.div>
@@ -176,14 +176,14 @@ export default function Relatorios() {
       {/* Últimos pedidos */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-white/[0.06]">
-          <h2 className="font-display font-semibold text-forest-100">Últimos pedidos</h2>
+          <h2 className="font-display font-semibold text-forest-900">Últimos pedidos</h2>
         </div>
         <div className="divide-y divide-white/[0.05]">
           {filtrado.slice(0, 20).map((pedido) => (
             <div key={pedido.id} className="flex items-center gap-3 px-5 py-3">
               <Fish className="w-4 h-4 text-forest-600 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-forest-100 text-sm font-medium truncate">{pedido.piqueNome}</p>
+                <p className="text-forest-900 text-sm font-medium truncate">{pedido.piqueNome}</p>
                 <p className="text-forest-600 text-xs">
                   {pedido.itens.length} {pedido.itens.length === 1 ? "item" : "itens"}
                   {pedido.criadoEm && ` • ${formatDate(pedido.criadoEm.toDate())}`}
@@ -226,6 +226,7 @@ function getStatusBadge(status: OrderStatus) {
   const map: Record<OrderStatus, string> = {
     novo: "status-novo", em_preparo: "status-preparo",
     saiu: "status-saiu", entregue: "status-entregue", pago: "status-pago",
+    cancelado: "bg-red-500/10 text-red-500 border-red-500/20",
   };
   return map[status];
 }

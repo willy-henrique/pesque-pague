@@ -53,7 +53,7 @@ export default function Cardapio() {
   const cartCount = cart.count();
 
   return (
-    <main className="min-h-dvh flex flex-col" style={{ background: "#061208" }}>
+    <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 py-3 max-w-xl mx-auto">
@@ -212,8 +212,8 @@ function CategoryChip({ label, active, onClick }: { label: string; active: boole
       onClick={onClick}
       className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
         active
-          ? "bg-gold-500 text-forest-950 shadow-gold-glow"
-          : "glass text-forest-200 hover:border-gold-500/30"
+          ? "bg-gold-600 text-white shadow-gold-glow"
+          : "glass text-forest-600 hover:border-gold-500/30"
       }`}
     >
       {label}
@@ -259,7 +259,7 @@ function ProductCard({ produto }: { produto: Produto }) {
       {/* Info */}
       <div className="p-3 flex flex-col flex-1 gap-2">
         <div className="flex-1">
-          <h3 className="font-semibold text-sm text-forest-50 leading-tight line-clamp-2">
+          <h3 className="font-semibold text-sm text-forest-900 leading-tight line-clamp-2">
             {produto.nome}
           </h3>
           {produto.descricao && (
@@ -342,7 +342,7 @@ function PromoCard({ promo }: { promo: Promocao }) {
         )}
       </div>
       <div className="p-3 flex flex-col gap-2 flex-1">
-        <p className="font-semibold text-xs text-forest-50 leading-tight line-clamp-2">{promo.titulo}</p>
+        <p className="font-semibold text-xs text-forest-900 leading-tight line-clamp-2">{promo.titulo}</p>
         <div className="flex items-center gap-2 flex-wrap">
           {promo.precoOriginal > 0 && (
             <span className="text-forest-600 text-xs line-through">

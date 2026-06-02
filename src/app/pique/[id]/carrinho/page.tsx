@@ -5,7 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Minus, Plus, Trash2, ShoppingCart, Fish, MessageSquare, Receipt } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import toast from "react-hot-toast";
 import { useCart } from "@/store/cart";
+import { db } from "@/lib/firebase";
 import { formatCurrency } from "@/lib/utils";
 
 export default function Carrinho() {
@@ -13,11 +16,44 @@ export default function Carrinho() {
   const router  = useRouter();
   const cart    = useCart();
   const [obsAberta, setObsAberta] = useState<string | null>(null);
+  const [obsGeral, setObsGeral] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
   const isEmpty = cart.items.length === 0;
 
+  const handleEnviarPedido = async () => {
+    if (isEmpty || enviando) return;
+
+    setEnviando(true);
+    try {
+      await addDoc(collection(db, "pedidos"), {
+        piqueId: cart.piqueId ?? id,
+        piqueNome: cart.piqueNome ?? `Mesa ${id}`,
+        itens: cart.items,
+        observacaoGeral: obsGeral.trim(),
+        total: cart.total(),
+        status: "novo",
+        criadoEm: serverTimestamp(),
+        atualizadoEm: serverTimestamp(),
+      });
+
+      try {
+        await updateDoc(doc(db, "piques", cart.piqueId ?? id), { status: "ocupado" });
+      } catch {
+        // Pedido enviado mesmo sem permissão para atualizar status da mesa.
+      }
+
+      cart.clearCart();
+      toast.success("Pedido enviado para a cozinha!");
+      router.replace(`/pique/${id}/cardapio`);
+    } catch {
+      toast.error("Erro ao enviar pedido. Tente novamente.");
+      setEnviando(false);
+    }
+  };
+
   return (
-    <main className="min-h-dvh flex flex-col" style={{ background: "#061208" }}>
+    <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 py-4 max-w-xl mx-auto">
@@ -40,7 +76,7 @@ export default function Carrinho() {
           {!isEmpty && (
             <button
               onClick={cart.clearCart}
-              className="text-forest-500 hover:text-red-400 transition-colors p-2"
+              className="text-forest-9000 hover:text-red-400 transition-colors p-2"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -58,10 +94,10 @@ export default function Carrinho() {
               className="flex flex-col items-center justify-center py-24 gap-5 text-center"
             >
               <div className="w-20 h-20 rounded-full glass flex items-center justify-center">
-                <ShoppingCart className="w-8 h-8 text-forest-500" />
+                <ShoppingCart className="w-8 h-8 text-forest-9000" />
               </div>
               <div>
-                <h2 className="font-display text-xl text-forest-100 mb-1">Carrinho vazio</h2>
+                <h2 className="font-display text-xl text-forest-900 mb-1">Carrinho vazio</h2>
                 <p className="text-forest-400 text-sm">Adicione itens do cardápio para continuar.</p>
               </div>
               <button
@@ -98,14 +134,14 @@ export default function Carrinho() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-forest-50 text-sm leading-tight truncate">
+                      <h3 className="font-semibold text-forest-900 text-sm leading-tight truncate">
                         {item.nome}
                       </h3>
                       <p className="gradient-gold-text font-bold text-sm mt-0.5">
                         {formatCurrency(item.preco * item.quantidade)}
                       </p>
                       {item.quantidade > 1 && (
-                        <p className="text-forest-500 text-xs">
+                        <p className="text-forest-9000 text-xs">
                           {item.quantidade}× {formatCurrency(item.preco)}
                         </p>
                       )}
@@ -132,7 +168,7 @@ export default function Carrinho() {
                       </div>
                       <button
                         onClick={() => setObsAberta(obsAberta === item.produtoId ? null : item.produtoId)}
-                        className="flex items-center gap-1 text-forest-400 hover:text-forest-200 text-xs transition-colors"
+                        className="flex items-center gap-1 text-forest-400 hover:text-forest-900 text-xs transition-colors"
                       >
                         <MessageSquare className="w-3 h-3" />
                         {item.obs ? "obs." : "add obs."}
@@ -180,14 +216,26 @@ export default function Carrinho() {
               </span>
             </div>
             <div className="section-divider" />
-            <p className="text-forest-500 text-xs text-center">
+            <div className="space-y-1">
+              <label className="text-forest-400 text-xs">Observação geral (opcional)</label>
+              <textarea
+                value={obsGeral}
+                onChange={(e) => setObsGeral(e.target.value)}
+                maxLength={200}
+                rows={2}
+                placeholder="Alguma observação para o pedido?"
+                className="input-field resize-none text-sm"
+              />
+            </div>
+            <p className="text-forest-9000 text-xs text-center">
               Pagamento realizado no caixa ao final da pescaria.
             </p>
             <button
-              onClick={() => router.push(`/pique/${id}/confirmar`)}
-              className="btn-gold w-full py-3.5 rounded-xl text-base"
+              onClick={handleEnviarPedido}
+              disabled={enviando}
+              className="btn-gold w-full py-3.5 rounded-xl text-base disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Confirmar Pedido
+              {enviando ? "Enviando..." : "Enviar Pedido"}
             </button>
           </div>
         </div>

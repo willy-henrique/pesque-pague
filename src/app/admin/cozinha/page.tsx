@@ -71,7 +71,7 @@ export default function Cozinha() {
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gold-500" />
-            <h2 className="font-semibold text-forest-100 text-sm">Aguardando preparo</h2>
+            <h2 className="font-semibold text-forest-900 text-sm">Aguardando preparo</h2>
             {pendentes.length > 0 && (
               <span className="badge status-novo animate-pulse-gold ml-1">{pendentes.length}</span>
             )}
@@ -94,7 +94,7 @@ export default function Cozinha() {
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-water-300" />
-            <h2 className="font-semibold text-forest-100 text-sm">Em preparo</h2>
+            <h2 className="font-semibold text-forest-900 text-sm">Em preparo</h2>
             {preparo.length > 0 && (
               <span className="badge status-preparo ml-1">{preparo.length}</span>
             )}
@@ -161,7 +161,7 @@ function PedidoCard({
           {pedido.piqueNome.slice(-2)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-forest-50 text-sm">{pedido.piqueNome}</p>
+          <p className="font-bold text-forest-900 text-sm">{pedido.piqueNome}</p>
           <p className="text-forest-500 text-xs">
             #{pedido.id.slice(-4).toUpperCase()}
             {pedido.criadoEm && ` · ${formatTime(pedido.criadoEm.toDate())}`}
@@ -188,7 +188,7 @@ function PedidoCard({
               {item.quantidade}×
             </span>
             <div className="flex-1 min-w-0">
-              <span className="text-forest-100 text-sm font-medium">{item.nome}</span>
+              <span className="text-forest-900 text-sm font-medium">{item.nome}</span>
               {item.obs && (
                 <p className="text-forest-500 text-xs italic">↳ {item.obs}</p>
               )}

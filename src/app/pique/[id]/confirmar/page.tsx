@@ -58,7 +58,7 @@ export default function Confirmar() {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col" style={{ background: "#061208" }}>
+    <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
       <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 py-4 max-w-xl mx-auto">
           <button onClick={() => router.back()} className="btn-ghost p-2 rounded-xl">
@@ -83,7 +83,7 @@ export default function Confirmar() {
           </div>
           <div>
             <p className="text-forest-400 text-xs">Entrega no</p>
-            <p className="font-semibold text-forest-100">{cart.piqueNome ?? `Mesa ${id}`}</p>
+            <p className="font-semibold text-forest-900">{cart.piqueNome ?? `Mesa ${id}`}</p>
           </div>
           <CheckCircle2 className="w-5 h-5 text-forest-400 ml-auto" />
         </motion.div>
@@ -104,13 +104,13 @@ export default function Confirmar() {
             {cart.items.map((item) => (
               <div key={item.produtoId} className="flex items-center gap-3 px-4 py-3">
                 <span className="text-gold-500 font-bold text-sm w-6">{item.quantidade}×</span>
-                <span className="flex-1 text-forest-100 text-sm">{item.nome}</span>
+                <span className="flex-1 text-forest-900 text-sm">{item.nome}</span>
                 {item.obs && (
                   <span className="text-forest-500 text-xs italic truncate max-w-[100px]">
                     {item.obs}
                   </span>
                 )}
-                <span className="text-forest-300 text-sm font-medium">
+                <span className="text-forest-700 text-sm font-medium">
                   {formatCurrency(item.preco * item.quantidade)}
                 </span>
               </div>

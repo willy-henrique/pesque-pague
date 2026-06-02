@@ -158,7 +158,7 @@ export default function Promocoes() {
           className="glass rounded-2xl px-5 py-3 flex items-center gap-3 border border-gold-500/20"
         >
           <Zap className="w-5 h-5 text-gold-500 shrink-0" />
-          <p className="text-forest-200 text-sm">
+          <p className="text-forest-700 text-sm">
             <span className="text-gold-400 font-bold">{ativas}</span> promoç{ativas > 1 ? "ões" : "ão"} aparecendo
             em destaque no cardápio dos clientes agora.
           </p>
@@ -207,7 +207,7 @@ export default function Promocoes() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm text-forest-50 truncate">{promo.titulo}</p>
+                    <p className="font-semibold text-sm text-forest-900 truncate">{promo.titulo}</p>
                     {promo.ativo && (
                       <span className="badge status-novo text-[10px] shrink-0">ao vivo</span>
                     )}

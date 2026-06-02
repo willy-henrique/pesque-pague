@@ -6,8 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, LayoutDashboard, Package, Tags, MapPin, BarChart2,
-  LogOut, Menu, X, ChevronRight, Tag, Banknote, Settings,
-  ChefHat,
+  LogOut, Menu, X, Tag, Banknote, Settings,
+  ChefHat, Moon, Sun,
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -25,10 +25,32 @@ const NAV_ITEMS = [
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 
+/* ── Theme hook ─────────────────────────────────────────── */
+function useTheme() {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark = stored === "dark";
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
+
+  return { dark, toggle };
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [authed, setAuthed]   = useState<boolean | null>(null);
+  const { dark, toggle } = useTheme();
+  const [authed, setAuthed]           = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -53,15 +75,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-dvh flex" style={{ background: "#061208" }}>
-      {/* Desktop Sidebar */}
+    <div className="min-h-dvh flex" style={{ background: dark ? "#0F172A" : "#F8FAFC" }}>
+      {/* ── Desktop Sidebar ──────────────────────────── */}
       <aside
-        className="hidden lg:flex flex-col w-64 glass border-r border-white/[0.06] sticky top-0 h-dvh"
+        className="hidden lg:flex flex-col w-60 shrink-0 sticky top-0 h-dvh"
+        style={{ background: "#0F172A" }}
       >
-        <SidebarContent pathname={pathname} onLogout={handleLogout} />
+        <SidebarContent
+          pathname={pathname}
+          dark={dark}
+          onToggleTheme={toggle}
+          onLogout={handleLogout}
+        />
       </aside>
 
-      {/* Mobile overlay */}
+      {/* ── Mobile overlay ───────────────────────────── */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
@@ -75,34 +103,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
             <motion.aside
               key="drawer"
-              initial={{ x: -280 }}
+              initial={{ x: -256 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="lg:hidden fixed left-0 top-0 h-dvh w-64 z-50 flex flex-col"
-              style={{ background: "#0d1f16", borderRight: "1px solid rgba(255,255,255,0.08)" }}
+              exit={{ x: -256 }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="lg:hidden fixed left-0 top-0 h-dvh w-60 z-50 flex flex-col"
+              style={{ background: "#0F172A" }}
             >
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="absolute top-4 right-4 btn-ghost p-2 rounded-xl"
+                className="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
-              <SidebarContent pathname={pathname} onLogout={handleLogout} onNavClick={() => setSidebarOpen(false)} />
+              <SidebarContent
+                pathname={pathname}
+                dark={dark}
+                onToggleTheme={toggle}
+                onLogout={handleLogout}
+                onNavClick={() => setSidebarOpen(false)}
+              />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
-      {/* Main */}
+      {/* ── Main ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile topbar */}
-        <header className="lg:hidden glass border-b border-white/[0.06] px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2 rounded-xl">
+        <header
+          className="lg:hidden sticky top-0 z-30 border-b px-4 py-3 flex items-center gap-3"
+          style={{
+            background: dark ? "#1E293B" : "#FFFFFF",
+            borderColor: dark ? "#334155" : "#E2E8F0",
+          }}
+        >
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: dark ? "#94A3B8" : "#475569" }}
+          >
             <Menu className="w-5 h-5" />
           </button>
-          <Fish className="w-5 h-5 text-gold-500" />
-          <span className="font-display font-semibold text-gold-400 text-sm">WillTech Pesqueiros</span>
+          <div className="flex items-center gap-2 flex-1">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "#0F766E" }}>
+              <Fish className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm" style={{ color: dark ? "#F1F5F9" : "#0F172A" }}>
+              WillTech
+            </span>
+          </div>
+          <button
+            onClick={toggle}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: dark ? "#94A3B8" : "#64748B" }}
+            title={dark ? "Modo claro" : "Modo escuro"}
+          >
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
@@ -115,33 +173,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function SidebarContent({
   pathname,
+  dark,
+  onToggleTheme,
   onLogout,
   onNavClick,
 }: {
   pathname: string;
+  dark: boolean;
+  onToggleTheme: () => void;
   onLogout: () => void;
   onNavClick?: () => void;
 }) {
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="p-5 border-b border-white/[0.06]">
+      <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, #1a3a2a, #2d6a4f)", boxShadow: "0 0 20px rgba(45,106,79,0.3)" }}
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "#0F766E" }}>
+            <Fish className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm leading-none">WillTech</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">Pesqueiros</p>
+          </div>
+          {/* Theme toggle in sidebar */}
+          <button
+            onClick={onToggleTheme}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            title={dark ? "Modo claro" : "Modo escuro"}
           >
-            <Fish className="w-5 h-5 text-gold-500" />
-          </div>
-          <div>
-            <p className="font-display font-bold text-gold-400 text-sm leading-none">WillTech</p>
-            <p className="text-forest-500 text-xs">Pesqueiros</p>
-          </div>
+            {dark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           return (
@@ -149,40 +216,57 @@ function SidebarContent({
               key={href}
               href={href}
               onClick={onNavClick}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                active
-                  ? "bg-gradient-to-r from-forest-700/60 to-forest-600/30 text-gold-400 border border-forest-500/30"
-                  : "text-forest-400 hover:bg-forest-900/60 hover:text-forest-100"
-              }`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group"
+              style={{
+                background: active ? "rgba(13,148,136,0.15)" : undefined,
+                color: active ? "#FFFFFF" : "#94A3B8",
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  e.currentTarget.style.color = "#FFFFFF";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = "";
+                  e.currentTarget.style.color = "#94A3B8";
+                }
+              }}
             >
-              <Icon className={`w-5 h-5 shrink-0 ${active ? "text-gold-500" : "text-forest-600 group-hover:text-forest-400"}`} />
+              <Icon
+                className="w-4 h-4 shrink-0"
+                style={{ color: active ? "#2DD4BF" : undefined }}
+              />
               <span className="text-sm font-medium flex-1">{label}</span>
-              {active && <ChevronRight className="w-3.5 h-3.5 text-gold-600" />}
+              {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2DD4BF" }} />}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-white/[0.06]">
+      {/* Bottom */}
+      <div className="px-3 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-forest-500 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm"
         >
           <LogOut className="w-4 h-4" />
-          Sair
+          <span className="font-medium">Sair</span>
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
 function AdminLoadingScreen() {
   return (
-    <div className="min-h-dvh flex items-center justify-center" style={{ background: "#061208" }}>
-      <div className="flex flex-col items-center gap-4">
-        <Fish className="w-10 h-10 text-gold-500 animate-float" />
-        <p className="text-forest-400 text-sm">Carregando...</p>
+    <div className="min-h-dvh flex items-center justify-center" style={{ background: "#F8FAFC" }}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#0F766E" }}>
+          <Fish className="w-5 h-5 text-white animate-float" />
+        </div>
+        <p className="text-slate-500 text-sm font-medium">Carregando...</p>
       </div>
     </div>
   );

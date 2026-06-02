@@ -175,7 +175,7 @@ export default function Caixa() {
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
-          <h2 className="font-display font-semibold text-forest-100">
+          <h2 className="font-display font-semibold text-forest-900">
             Aguardando pagamento
           </h2>
           {piquesPendentes.length > 0 && (
@@ -215,7 +215,7 @@ export default function Caixa() {
                     <Fish className="w-5 h-5 text-gold-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-forest-50 text-sm">{grupo.piqueNome}</p>
+                    <p className="font-semibold text-forest-900 text-sm">{grupo.piqueNome}</p>
                     <p className="text-forest-500 text-xs">
                       {grupo.pedidos.length} {grupo.pedidos.length === 1 ? "pedido entregue" : "pedidos entregues"}
                     </p>
@@ -339,7 +339,7 @@ export default function Caixa() {
             {fechamentos.slice(0, 7).map((f) => (
               <div key={f.id} className="flex items-center gap-3 px-4 py-3">
                 <div>
-                  <p className="text-forest-200 text-sm font-medium">
+                  <p className="text-forest-700 text-sm font-medium">
                     {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}
                   </p>
                   <p className="text-forest-600 text-xs">{f.totalPedidos} pedidos · {f.piquesFechados} mesas</p>
@@ -373,7 +373,7 @@ export default function Caixa() {
                     <LockKeyhole className="w-5 h-5 text-gold-500" />
                   </div>
                   <div>
-                    <h2 className="font-display font-bold text-forest-100">Fechar Caixa</h2>
+                    <h2 className="font-display font-bold text-forest-900">Fechar Caixa</h2>
                     <p className="text-forest-500 text-xs">
                       {new Date().toLocaleDateString("pt-BR")}
                     </p>
@@ -454,7 +454,7 @@ function SummaryRow({ label, value, highlight, warn }: {
       <span className={`font-semibold text-sm ${
         highlight ? "gradient-gold-text text-base font-bold" :
         warn       ? "text-gold-400" :
-        "text-forest-200"
+        "text-forest-700"
       }`}>{value}</span>
     </div>
   );

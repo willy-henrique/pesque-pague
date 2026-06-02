@@ -10,10 +10,10 @@ import toast from "react-hot-toast";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [email, setEmail]       = useState("");
-  const [senha, setSenha]       = useState("");
-  const [showPwd, setShowPwd]   = useState(false);
-  const [loading, setLoading]   = useState(false);
+  const [email, setEmail]     = useState("");
+  const [senha, setSenha]     = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,92 +28,113 @@ export default function AdminLogin() {
   };
 
   return (
-    <main
-      className="min-h-dvh flex flex-col items-center justify-center p-6"
-      style={{ background: "radial-gradient(ellipse at top, #142b1e 0%, #061208 70%)" }}
-    >
-      {/* Ambient */}
+    <main className="min-h-dvh flex" style={{ background: "#F8FAFC" }}>
+      {/* Left decorative panel */}
       <div
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
-        style={{ background: "radial-gradient(ellipse, rgba(45,106,79,0.2) 0%, transparent 70%)" }}
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-sm relative"
+        className="hidden lg:flex flex-col justify-between w-[420px] shrink-0 p-10"
+        style={{ background: "#0F172A" }}
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <motion.div
-            animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{
-              background: "linear-gradient(135deg, #1a3a2a, #2d6a4f)",
-              boxShadow: "0 0 40px rgba(45,106,79,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
-            }}
-          >
-            <Fish className="w-8 h-8 text-gold-500" />
-          </motion.div>
-          <h1 className="font-display text-2xl font-bold gradient-gold-text">
-            WillTech Pesqueiros
-          </h1>
-          <p className="text-forest-400 text-sm mt-1">Painel Gerencial</p>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "#0F766E" }}>
+            <Fish className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-semibold text-sm">WillTech</p>
+            <p className="text-forest-400 text-xs">Pesqueiros</p>
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="glass rounded-3xl p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="text-forest-300 text-sm font-medium">E-mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="gerente@pesqueiro.com"
-              required
-              className="input-field"
-            />
-          </div>
+        <div>
+          <h2 className="text-white text-3xl font-bold leading-tight">
+            Sistema de gestão<br />
+            <span style={{ color: "#0D9488" }}>para pesqueiros.</span>
+          </h2>
+          <p className="text-forest-400 mt-4 text-sm leading-relaxed">
+            Controle de pedidos, mesas, cozinha, caixa e relatórios — tudo em um só lugar.
+          </p>
+        </div>
 
-          <div className="space-y-1">
-            <label className="text-forest-300 text-sm font-medium">Senha</label>
-            <div className="relative">
-              <input
-                type={showPwd ? "text" : "password"}
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="input-field pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-300 transition-colors"
-              >
-                {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+        <p className="text-forest-600 text-xs">© 2025 WillTech Pesqueiros</p>
+      </div>
+
+      {/* Right login panel */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-sm"
+        >
+          {/* Mobile brand */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "#0F766E" }}>
+              <Fish className="w-4 h-4 text-white" />
             </div>
+            <p className="font-semibold text-forest-900">WillTech Pesqueiros</p>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-gold w-full py-3.5 rounded-xl mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2 justify-center">
-                <span className="w-4 h-4 border-2 border-forest-900 border-t-transparent rounded-full animate-spin" />
-                Entrando...
-              </span>
-            ) : (
-              <><LogIn className="w-4 h-4" /> Entrar</>
-            )}
-          </button>
-        </form>
-      </motion.div>
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-forest-900">Entrar</h1>
+            <p className="text-forest-500 text-sm mt-1">Painel gerencial</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-forest-700 mb-1.5">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="gerente@pesqueiro.com"
+                required
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-forest-700 mb-1.5">
+                Senha
+              </label>
+              <div className="relative">
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="input-field pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-400 hover:text-forest-600 transition-colors"
+                >
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-gold w-full py-3 rounded-xl mt-2 disabled:opacity-55 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Entrando...
+                </span>
+              ) : (
+                <><LogIn className="w-4 h-4" /> Entrar</>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
     </main>
   );
 }

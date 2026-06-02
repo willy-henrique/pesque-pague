@@ -34,10 +34,10 @@ export default function AppCliente() {
     return (
       <main
         className="min-h-dvh flex flex-col items-center justify-center p-8 text-center"
-        style={{ background: "radial-gradient(ellipse at top, #0d1f16 0%, #061208 60%)" }}
+        style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
       >
         <MoonStar className="w-14 h-14 text-forest-600 mb-5" />
-        <h1 className="font-display text-2xl font-bold text-forest-200 mb-2">
+        <h1 className="font-display text-2xl font-bold text-forest-800 mb-2">
           {config.nomeEstabelecimento}
         </h1>
         <p className="text-forest-400 text-base font-medium mb-1">Estamos fechados no momento</p>
@@ -49,7 +49,7 @@ export default function AppCliente() {
   return (
     <main
       className="min-h-dvh px-5 py-8"
-      style={{ background: "radial-gradient(ellipse at top, #1a3a2a 0%, #061208 62%)" }}
+      style={{ background: "radial-gradient(ellipse at top, #E0F2FE 0%, #F8FAFC 60%)" }}
     >
       <div className="max-w-xl mx-auto space-y-6">
         <header className="text-center space-y-4">
@@ -100,10 +100,10 @@ export default function AppCliente() {
                     )}
                   </div>
                   <div className="min-w-0 text-left">
-                    <p className="font-semibold text-forest-50 truncate">
+                    <p className="font-semibold text-forest-900 truncate">
                       {mesa.nome || `Mesa ${mesa.numero}`}
                     </p>
-                    <p className="text-forest-500 text-sm mt-0.5">Abrir cardápio</p>
+                    <p className="text-forest-9000 text-sm mt-0.5">Abrir cardápio</p>
                   </div>
                 </Link>
               </motion.div>
