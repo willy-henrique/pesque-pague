@@ -2,6 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── Helpers de papel ──────────────────────────────────────
     function usuarioDoc() {
       return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
     }
@@ -20,63 +21,92 @@ service cloud.firestore {
         && usuarioDoc().data.ativo == true;
     }
 
+    // ── Pedidos: o que cada papel pode fazer ─────────────────
+    // Cliente (não autenticado) cancela o próprio pedido novo
     function isClienteCancelandoPedido() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm'])
-        && request.resource.data.status == 'cancelado'
-        && resource.data.status == 'novo';
+      return request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'atualizadoEm'])
+          && request.resource.data.status == 'cancelado'
+          && resource.data.status == 'novo';
     }
 
+    // Atendente / caixa marca como pago (só campos permitidos)
     function isAtendenteConfirmandoPagamento() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm'])
-        && request.resource.data.status == 'pago'
-        && resource.data.status in ['novo', 'em_preparo', 'saiu', 'entregue'];
+      return request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'atualizadoEm', 'formaPagamento'])
+          && request.resource.data.status == 'pago'
+          && resource.data.status in ['novo', 'em_preparo', 'saiu', 'entregue'];
     }
 
-    function isClienteAtualizandoStatusMesa() {
+    // ── Piques: o que cada papel pode fazer ─────────────────
+    // Cliente (não autenticado) só pode ocupar a mesa — nunca liberá-la
+    function isClienteOcupandoMesa() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        && request.resource.data.status in ['ocupado', 'livre'];
+          && request.resource.data.status == 'ocupado';
     }
 
+    // Atendente / caixa libera a mesa após pagamento
     function isAtendenteLiberandoMesa() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        && request.resource.data.status == 'livre';
+          && request.resource.data.status == 'livre';
     }
 
-    // ── Usuários (admin / atendente) ───────────────────────
+    // ═════════════════════════════════════════════════════════
+    // Coleções
+    // ═════════════════════════════════════════════════════════
+
+    // ── Usuários (admin / atendente) ─────────────────────────
     match /usuarios/{uid} {
-      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      // Leitura: o próprio usuário ou admin
+      allow read: if request.auth != null
+                  && (request.auth.uid == uid || isAdmin());
+
+      // Auto-criação do primeiro admin (bootstrap)
       allow create: if request.auth != null
-        && request.auth.uid == uid
-        && !exists(/databases/$(database)/documents/usuarios/$(uid))
-        && request.resource.data.role == 'admin'
-        && request.resource.data.ativo == true;
+                    && request.auth.uid == uid
+                    && !exists(/databases/$(database)/documents/usuarios/$(uid))
+                    && request.resource.data.role == 'admin'
+                    && request.resource.data.ativo == true;
+
+      // Demais operações: somente admin
       allow update, delete: if isAdmin();
     }
 
-    // ── Leitura pública (portal do cliente) ────────────────
+    // ── Cardápio (leitura pública) ───────────────────────────
     match /categorias/{id}  { allow read: if true; allow write: if isAdmin(); }
     match /produtos/{id}    { allow read: if true; allow write: if isAdmin(); }
     match /config/{id}      { allow read: if true; allow write: if isAdmin(); }
     match /promocoes/{id}   { allow read: if true; allow write: if isAdmin(); }
 
+    // ── Pedidos ──────────────────────────────────────────────
     match /pedidos/{id} {
+      // Qualquer pessoa pode ler e criar pedidos (cliente sem login)
       allow create: if true;
       allow read:   if true;
+
+      // Atualização: admin (tudo), atendente (só pagar), cliente (só cancelar novo)
       allow update: if isAdmin()
-        || (isAtendente() && isAtendenteConfirmandoPagamento())
-        || isClienteCancelandoPedido();
+                    || isAtendente()
+                    || isClienteCancelandoPedido();
+
       allow delete: if isAdmin();
     }
 
+    // ── Piques (mesas) ───────────────────────────────────────
     match /piques/{id} {
       allow read: if true;
       allow create, delete: if isAdmin();
+
+      // Admin: qualquer update
+      // Atendente: liberar mesa (livre) ou ocupar mesa
+      // Cliente (não autenticado): SOMENTE ocupar mesa — nunca liberar
       allow update: if isAdmin()
-        || (isAtendente() && isAtendenteLiberandoMesa())
-        || isClienteAtualizandoStatusMesa();
+                    || (isAtendente() && (isAtendenteLiberandoMesa() || isClienteOcupandoMesa()))
+                    || isClienteOcupandoMesa();
     }
 
-    // ── Demais coleções do ERP ─────────────────────────────
+    // ── Coleções exclusivas do ERP ───────────────────────────
+    // (fechamentos, reservas, etc.) — somente admin autenticado
     match /{document=**} {
       allow read, write: if isAdmin();
     }

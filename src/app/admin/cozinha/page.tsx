@@ -19,9 +19,10 @@ export default function Cozinha() {
 
   const { data: todos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "asc")]);
 
-  // Cozinha vê: novo e em_preparo
-  const pendentes  = todos.filter((p) => p.status === "novo");
-  const preparo    = todos.filter((p) => p.status === "em_preparo");
+  // Cozinha vê apenas pedidos que têm pelo menos 1 item de comida (tipo != "bebida")
+  const temComida = (p: Pedido) => p.itens.some((i) => !i.tipo || i.tipo === "comida");
+  const pendentes  = todos.filter((p) => p.status === "novo" && temComida(p));
+  const preparo    = todos.filter((p) => p.status === "em_preparo" && temComida(p));
 
   useEffect(() => {
     const novos = pendentes.length;
@@ -84,7 +85,7 @@ export default function Cozinha() {
           ) : (
             <AnimatePresence mode="popLayout">
               {pendentes.map((pedido) => (
-                <PedidoCard key={pedido.id} pedido={pedido} now={now} onAvancar={() => avancar(pedido)} urgente />
+                <PedidoCard key={pedido.id} pedido={pedido} now={now} onAvancar={() => avancar(pedido)} urgente filtroTipo="comida" />
               ))}
             </AnimatePresence>
           )}
@@ -107,7 +108,7 @@ export default function Cozinha() {
           ) : (
             <AnimatePresence mode="popLayout">
               {preparo.map((pedido) => (
-                <PedidoCard key={pedido.id} pedido={pedido} now={now} onAvancar={() => avancar(pedido)} />
+                <PedidoCard key={pedido.id} pedido={pedido} now={now} onAvancar={() => avancar(pedido)} filtroTipo="comida" />
               ))}
             </AnimatePresence>
           )}
@@ -117,16 +118,18 @@ export default function Cozinha() {
   );
 }
 
-function PedidoCard({
+export function PedidoCard({
   pedido,
   now,
   onAvancar,
   urgente,
+  filtroTipo,
 }: {
   pedido: Pedido;
   now: number;
   onAvancar: () => void;
   urgente?: boolean;
+  filtroTipo?: "comida" | "bebida";
 }) {
   const proximo = STATUS_NEXT[pedido.status];
 
@@ -166,6 +169,9 @@ function PedidoCard({
             #{pedido.id.slice(-4).toUpperCase()}
             {pedido.criadoEm && ` · ${formatTime(pedido.criadoEm.toDate())}`}
           </p>
+          {pedido.nomeCliente && (
+            <p className="text-water-400 text-xs font-medium truncate">{pedido.nomeCliente}</p>
+          )}
         </div>
         <div className="text-right shrink-0">
           {atrasado ? (
@@ -180,7 +186,7 @@ function PedidoCard({
 
       {/* Itens */}
       <div className="px-4 py-2 border-t border-white/[0.05] space-y-1">
-        {pedido.itens.map((item, i) => (
+        {pedido.itens.filter((item) => !filtroTipo || !item.tipo || item.tipo === filtroTipo).map((item, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className={`font-black text-sm shrink-0 w-6 text-right ${
               urgente ? "text-gold-500" : "text-water-300"

@@ -21,11 +21,17 @@ export default function Confirmar() {
   const handleEnviar = async () => {
     if (cart.items.length === 0) return;
 
+    const piqueId = cart.piqueId ?? id;
+    const raw = sessionStorage.getItem(`cliente-${piqueId}`);
+    const cliente = raw ? (JSON.parse(raw) as { nome: string; telefone: string }) : { nome: "", telefone: "" };
+
     setLoading(true);
     try {
       await addDoc(collection(db, "pedidos"), {
-        piqueId:         cart.piqueId ?? id,
+        piqueId,
         piqueNome:       cart.piqueNome ?? `Mesa ${id}`,
+        nomeCliente:     cliente.nome,
+        telefoneCliente: cliente.telefone,
         itens:           cart.items,
         observacaoGeral: obsGeral.trim(),
         total:           cart.total(),

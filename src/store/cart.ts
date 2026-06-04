@@ -9,7 +9,7 @@ interface CartStore {
   piqueId: string | null;
   piqueNome: string | null;
 
-  addItem: (produto: Produto, obs?: string) => void;
+  addItem: (produto: Produto, obs?: string, adicionaisSelecionados?: { nome: string; preco: number }[]) => void;
   removeItem: (produtoId: string) => void;
   updateQty: (produtoId: string, qty: number) => void;
   updateObs: (produtoId: string, obs: string) => void;
@@ -27,15 +27,20 @@ export const useCart = create<CartStore>()(
       piqueId: null,
       piqueNome: null,
 
-      addItem(produto, obs = "") {
+      addItem(produto, obs = "", adicionaisSelecionados) {
+        const extras = adicionaisSelecionados?.length ? adicionaisSelecionados : undefined;
+        const precoUnit = produto.preco + (extras ?? []).reduce((s, a) => s + a.preco, 0);
+        // itens com mesmo produto + mesmos adicionais são agrupados; combinações diferentes = entradas distintas
+        const cartKey = extras?.length
+          ? `${produto.id}__${extras.map((a) => a.nome).sort().join("|")}`
+          : produto.id;
+
         set((state) => {
-          const existing = state.items.find((i) => i.produtoId === produto.id);
+          const existing = state.items.find((i) => i.produtoId === cartKey);
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.produtoId === produto.id
-                  ? { ...i, quantidade: i.quantidade + 1 }
-                  : i
+                i.produtoId === cartKey ? { ...i, quantidade: i.quantidade + 1 } : i
               ),
             };
           }
@@ -43,12 +48,14 @@ export const useCart = create<CartStore>()(
             items: [
               ...state.items,
               {
-                produtoId: produto.id,
+                produtoId: cartKey,
                 nome:      produto.nome,
-                preco:     produto.preco,
+                preco:     precoUnit,
                 fotoUrl:   produto.fotoUrl,
                 quantidade: 1,
-                obs,
+                obs:       obs ?? "",
+                tipo:      produto.tipo ?? "comida",
+                adicionaisSelecionados: extras,
               },
             ],
           };

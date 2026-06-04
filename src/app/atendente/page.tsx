@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ClipboardPlus, Fish, LogOut, Receipt, UserRound } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
@@ -16,10 +18,32 @@ export default function AtendentePage() {
   const { usuario } = useRequireAtendente();
   const { data: piques, loading } = useCollection<Pique>("piques", [orderBy("numero", "asc")]);
 
+  const [modalMesa, setModalMesa] = useState<Pique | null>(null);
+  const [clienteNome, setClienteNome] = useState("");
+  const [clienteTel, setClienteTel] = useState("");
+
   const handleLogout = async () => {
     await signOut(auth);
     toast.success("Sessão encerrada.");
     router.replace("/atendente/login");
+  };
+
+  const abrirModal = (mesa: Pique) => {
+    setClienteNome("");
+    setClienteTel("");
+    setModalMesa(mesa);
+  };
+
+  const confirmarEIrAoCardapio = () => {
+    if (!modalMesa) return;
+    if (!clienteNome.trim()) return toast.error("Informe o nome do cliente.");
+    const params = new URLSearchParams({
+      modo: "atendente",
+      clienteNome: clienteNome.trim(),
+      clienteTelefone: clienteTel.trim(),
+    });
+    router.push(`/pique/${modalMesa.id}/cardapio?${params.toString()}`);
+    setModalMesa(null);
   };
 
   const mesasDisponiveis = piques.filter(
@@ -54,7 +78,7 @@ export default function AtendentePage() {
             </button>
           </div>
           <p className="text-forest-300 text-sm mt-4">
-            Se o cliente pedir direto ao atendente, selecione a mesa e lance o pedido por aqui.
+            Para lançar pedido manualmente, informe o nome e telefone do cliente antes de ir ao cardápio.
           </p>
         </header>
 
@@ -91,13 +115,14 @@ export default function AtendentePage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href={withModoAtendente(`/pique/${mesa.id}/cardapio`)}
+                  <button
+                    type="button"
+                    onClick={() => abrirModal(mesa)}
                     className="btn-gold py-2.5 rounded-xl text-sm"
                   >
                     <ClipboardPlus className="w-4 h-4" />
                     Novo pedido
-                  </Link>
+                  </button>
                   <Link
                     href={withModoAtendente(`/pique/${mesa.id}/comanda`)}
                     className="btn-ghost py-2.5 rounded-xl text-sm"
@@ -111,6 +136,76 @@ export default function AtendentePage() {
           </div>
         )}
       </div>
+
+      {/* Modal de identificação manual do cliente */}
+      <AnimatePresence>
+        {modalMesa && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setModalMesa(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass rounded-2xl w-full max-w-sm p-6 space-y-5 border border-forest-200"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-bold text-forest-900 text-lg">Identificar cliente</h2>
+                  <p className="text-forest-500 text-xs mt-0.5">
+                    {modalMesa.nome || `Mesa ${modalMesa.numero}`}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setModalMesa(null)} className="btn-ghost p-2 rounded-xl">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
+                    <UserRound className="w-3 h-3" /> Nome do cliente *
+                  </label>
+                  <input
+                    value={clienteNome}
+                    onChange={(e) => setClienteNome(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
+                    placeholder="João Silva"
+                    className="input-field"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
+                    <Phone className="w-3 h-3" /> Telefone (opcional)
+                  </label>
+                  <input
+                    value={clienteTel}
+                    onChange={(e) => setClienteTel(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
+                    placeholder="(00) 00000-0000"
+                    type="tel"
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={confirmarEIrAoCardapio}
+                disabled={!clienteNome.trim()}
+                className="btn-gold w-full py-3 rounded-xl disabled:opacity-50"
+              >
+                Ir ao cardápio
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

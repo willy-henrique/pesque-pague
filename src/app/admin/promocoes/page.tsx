@@ -10,8 +10,8 @@ import Image from "next/image";
 import {
   addDoc, updateDoc, deleteDoc, doc, collection, serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { uploadImage } from "@/lib/cloudinary";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { formatCurrency } from "@/lib/utils";
@@ -89,9 +89,7 @@ export default function Promocoes() {
     try {
       let fotoUrl = form.fotoUrl;
       if (form.fotoFile) {
-        const storageRef = ref(storage, `promocoes/${Date.now()}_${form.fotoFile.name}`);
-        await uploadBytes(storageRef, form.fotoFile);
-        fotoUrl = await getDownloadURL(storageRef);
+        fotoUrl = await uploadImage(form.fotoFile);
       }
 
       const payload = {

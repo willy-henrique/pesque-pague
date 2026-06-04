@@ -4,6 +4,13 @@ export function isPedidoAberto(status: OrderStatus) {
   return status !== "pago" && status !== "cancelado";
 }
 
+export interface ClienteComanda {
+  nome: string;
+  telefone: string;
+  pedidos: Pedido[];
+  total: number;
+}
+
 export interface ComandaGrupo {
   piqueId: string;
   piqueNome: string;
@@ -12,6 +19,7 @@ export interface ComandaGrupo {
   comandaId: string;
   prontaParaCobrar: boolean;
   contagemPorStatus: Record<OrderStatus, number>;
+  clientes: ClienteComanda[];
 }
 
 function toNumericComanda(seed: string) {
@@ -66,6 +74,7 @@ export function groupComandasAbertas(pedidos: Pedido[]): ComandaGrupo[] {
         comandaId: "",
         prontaParaCobrar: false,
         contagemPorStatus: countByStatus([]),
+        clientes: [],
       });
     }
   }
@@ -73,11 +82,30 @@ export function groupComandasAbertas(pedidos: Pedido[]): ComandaGrupo[] {
   const grupos = Array.from(map.values()).map((g) => {
     const contagemPorStatus = countByStatus(g.pedidos);
     const prontaParaCobrar = g.pedidos.every((p) => p.status === "entregue");
+
+    const clienteMap = new Map<string, ClienteComanda>();
+    for (const p of g.pedidos) {
+      const key = p.telefoneCliente || p.nomeCliente || "sem-identificacao";
+      const entry = clienteMap.get(key);
+      if (entry) {
+        entry.pedidos.push(p);
+        entry.total += p.total;
+      } else {
+        clienteMap.set(key, {
+          nome: p.nomeCliente || "Sem nome",
+          telefone: p.telefoneCliente || "",
+          pedidos: [p],
+          total: p.total,
+        });
+      }
+    }
+
     return {
       ...g,
       comandaId: getComandaDisplayId(g.piqueId, g.pedidos),
       prontaParaCobrar,
       contagemPorStatus,
+      clientes: Array.from(clienteMap.values()),
     };
   });
 

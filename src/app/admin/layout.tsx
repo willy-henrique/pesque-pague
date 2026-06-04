@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, LayoutDashboard, Package, Tags, MapPin, BarChart2,
   LogOut, Menu, X, Tag, Banknote, Settings,
-  ChefHat, Moon, Sun, UserRound,
+  ChefHat, Moon, Sun, UserRound, GlassWater,
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
   { href: "/admin/caixa",         label: "Caixa",         icon: Banknote },
   { href: "/admin/cozinha",       label: "Cozinha",       icon: ChefHat },
+  { href: "/admin/bar",           label: "Bar",           icon: GlassWater },
   { href: "/admin/produtos",      label: "Produtos",      icon: Package },
   { href: "/admin/categorias",    label: "Categorias",    icon: Tags },
   { href: "/admin/piques",        label: "Mesas",         icon: MapPin },
@@ -63,9 +64,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     pedidos.filter((p) => isPedidoAberto(p.status)).map((p) => p.piqueId)
   ).size;
 
+  const novos = pedidos.filter((p) => p.status === "novo");
   const navBadges: Record<string, number> = {
-    "/admin/cozinha": pedidos.filter((p) => p.status === "novo").length,
-    "/admin/caixa": comandasAbertas,
+    "/admin/cozinha": novos.filter((p) => p.itens.some((i) => !i.tipo || i.tipo === "comida")).length,
+    "/admin/bar":     novos.filter((p) => p.itens.some((i) => i.tipo === "bebida")).length,
+    "/admin/caixa":   comandasAbertas,
   };
 
   useEffect(() => {

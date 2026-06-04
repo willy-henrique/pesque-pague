@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Fish, Search, ToggleLeft, ToggleRight, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Fish, Search, ToggleLeft, ToggleRight, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import {
   addDoc, updateDoc, deleteDoc, doc, collection, serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { uploadImage } from "@/lib/cloudinary";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { formatCurrency } from "@/lib/utils";
-import type { Produto, Categoria } from "@/types";
+import type { Produto, Categoria, Adicional } from "@/types";
 import toast from "react-hot-toast";
 
 interface FormState {
@@ -24,11 +24,14 @@ interface FormState {
   ativo: boolean;
   fotoUrl: string;
   fotoFile: File | null;
+  tipo: "comida" | "bebida";
+  adicionais: Adicional[];
 }
 
 const EMPTY_FORM: FormState = {
   nome: "", descricao: "", preco: "", categoriaId: "", estoque: "99",
-  ativo: true, fotoUrl: "", fotoFile: null,
+  ativo: true, fotoUrl: "", fotoFile: null, tipo: "comida",
+  adicionais: [],
 };
 
 export default function Produtos() {
@@ -41,6 +44,14 @@ export default function Produtos() {
   const [editando, setEditando] = useState<Produto | null>(null);
   const [form, setForm]     = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!form.fotoFile) { setFotoPreview(null); return; }
+    const url = URL.createObjectURL(form.fotoFile);
+    setFotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [form.fotoFile]);
 
   const filtrados = produtos.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
@@ -53,7 +64,7 @@ export default function Produtos() {
   };
 
   const openEdit = (produto: Produto) => {
-    setForm({ ...produto, preco: String(produto.preco), estoque: String(produto.estoque), fotoFile: null });
+    setForm({ ...produto, preco: String(produto.preco), estoque: String(produto.estoque), fotoFile: null, tipo: produto.tipo ?? "comida", adicionais: produto.adicionais ?? [] });
     setEditando(produto);
     setModal("edit");
   };
@@ -67,9 +78,7 @@ export default function Produtos() {
       let fotoUrl = form.fotoUrl;
 
       if (form.fotoFile) {
-        const storageRef = ref(storage, `produtos/${Date.now()}_${form.fotoFile.name}`);
-        await uploadBytes(storageRef, form.fotoFile);
-        fotoUrl = await getDownloadURL(storageRef);
+        fotoUrl = await uploadImage(form.fotoFile);
       }
 
       const payload = {
@@ -80,6 +89,8 @@ export default function Produtos() {
         estoque:     parseInt(form.estoque) || 0,
         ativo:       form.ativo,
         fotoUrl,
+        tipo:        form.tipo,
+        adicionais:  form.adicionais,
       };
 
       if (modal === "add") {
@@ -245,7 +256,76 @@ export default function Produtos() {
                     {cats.map((c) => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
                   </select>
                 </FormField>
+                <FormField label="Tipo">
+                  <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as "comida" | "bebida" })} className="input-field">
+                    <option value="comida">🍽️ Comida (cozinha)</option>
+                    <option value="bebida">🥤 Bebida (bar)</option>
+                  </select>
+                </FormField>
+                <FormField label="Adicionais opcionais (cobrados à parte)">
+                  <div className="space-y-2">
+                    {form.adicionais.map((ad, i) => (
+                      <div key={ad.id} className="flex gap-2 items-center">
+                        <input
+                          value={ad.nome}
+                          onChange={(e) => {
+                            const next = [...form.adicionais];
+                            next[i] = { ...next[i], nome: e.target.value };
+                            setForm({ ...form, adicionais: next });
+                          }}
+                          placeholder="Ex: Molho extra, Farofa..."
+                          className="input-field flex-1 text-sm py-1.5"
+                        />
+                        <input
+                          type="number"
+                          value={ad.preco}
+                          step="0.50"
+                          min="0"
+                          onChange={(e) => {
+                            const next = [...form.adicionais];
+                            next[i] = { ...next[i], preco: parseFloat(e.target.value) || 0 };
+                            setForm({ ...form, adicionais: next });
+                          }}
+                          placeholder="R$"
+                          className="input-field w-20 text-sm py-1.5"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, adicionais: form.adicionais.filter((_, j) => j !== i) })}
+                          className="btn-ghost p-1.5 rounded-lg text-red-400 hover:text-red-300 shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          adicionais: [
+                            ...form.adicionais,
+                            { id: Date.now().toString(36), nome: "", preco: 0 },
+                          ],
+                        })
+                      }
+                      className="btn-ghost py-2 rounded-xl text-xs w-full border border-dashed border-forest-600 hover:border-gold-500 flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Adicionar opcional
+                    </button>
+                  </div>
+                </FormField>
                 <FormField label="Foto">
+                  {(fotoPreview || form.fotoUrl) && (
+                    <div className="relative w-full h-36 rounded-xl overflow-hidden bg-forest-800 mb-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={fotoPreview ?? form.fotoUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                   <input
                     type="file"
                     accept="image/*"

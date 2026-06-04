@@ -17,11 +17,23 @@ import type { Produto, Categoria, Promocao } from "@/types";
 export default function Cardapio() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const searchParams = useSearchParams();
   const { modoAtendente } = useModoAtendenteAuth();
   const cart    = useCart();
 
-  const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
-  const carrinhoHref = withModoAtendente(`/pique/${id}/carrinho`);
+  // Propaga identificação do cliente para o carrinho (modo atendente manual)
+  const clienteNomeParam = searchParams.get("clienteNome") ?? "";
+  const clienteTelParam  = searchParams.get("clienteTelefone") ?? "";
+
+  const buildHref = (path: string) => {
+    const params = new URLSearchParams({ modo: "atendente" });
+    if (clienteNomeParam) params.set("clienteNome", clienteNomeParam);
+    if (clienteTelParam)  params.set("clienteTelefone", clienteTelParam);
+    return `${path}?${params.toString()}`;
+  };
+
+  const comandaHref  = modoAtendente ? buildHref(`/pique/${id}/comanda`)   : `/pique/${id}/comanda`;
+  const carrinhoHref = modoAtendente ? buildHref(`/pique/${id}/carrinho`)  : `/pique/${id}/carrinho`;
 
   const voltar = () => {
     if (modoAtendente) router.push(comandaHref);
@@ -31,6 +43,7 @@ export default function Cardapio() {
   const [catAtiva, setCatAtiva] = useState<string>("todas");
   const [busca, setBusca]       = useState("");
   const [showBusca, setShowBusca] = useState(false);
+  const [personalizando, setPersonalizando] = useState<Produto | null>(null);
 
   // Queries simples sem índice composto — filtro/ordenação client-side
   const { data: todasCategorias, loading: loadCat } = useCollection<Categoria>("categorias", [
@@ -185,7 +198,11 @@ export default function Cardapio() {
             variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
           >
             {produtosFiltrados.map((produto) => (
-              <ProductCard key={produto.id} produto={produto} />
+              <ProductCard
+                key={produto.id}
+                produto={produto}
+                onPersonalizar={() => setPersonalizando(produto)}
+              />
             ))}
           </motion.div>
         )}
@@ -213,6 +230,15 @@ export default function Cardapio() {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Modal de personalização de adicionais */}
+      <AnimatePresence>
+        {personalizando && (
+          <PersonalizarModal
+            produto={personalizando}
+            onClose={() => setPersonalizando(null)}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }
@@ -232,10 +258,16 @@ function CategoryChip({ label, active, onClick }: { label: string; active: boole
   );
 }
 
-function ProductCard({ produto }: { produto: Produto }) {
+function ProductCard({ produto, onPersonalizar }: { produto: Produto; onPersonalizar: () => void }) {
   const { items, addItem, updateQty } = useCart();
-  const itemNoCarrinho = items.find((i) => i.produtoId === produto.id);
-  const qty = itemNoCarrinho?.quantidade ?? 0;
+  const itemNoCarrinho = items.find((i) => i.produtoId === produto.id || i.produtoId.startsWith(`${produto.id}__`));
+  const qty = items.filter((i) => i.produtoId === produto.id || i.produtoId.startsWith(`${produto.id}__`)).reduce((s, i) => s + i.quantidade, 0);
+  const temAdicionais = (produto.adicionais?.length ?? 0) > 0;
+
+  const handleAdd = () => {
+    if (temAdicionais) onPersonalizar();
+    else addItem(produto);
+  };
 
   return (
     <motion.div
@@ -245,8 +277,12 @@ function ProductCard({ produto }: { produto: Produto }) {
       }}
       className="glass glass-hover rounded-2xl overflow-hidden flex flex-col"
     >
-      {/* Image */}
-      <div className="relative h-36 bg-forest-800 overflow-hidden">
+      {/* Image — click adds to cart (or opens customization modal) */}
+      <motion.div
+        className="relative h-36 bg-forest-800 overflow-hidden cursor-pointer select-none"
+        whileTap={{ scale: 0.95 }}
+        onClick={handleAdd}
+      >
         {produto.fotoUrl ? (
           <Image
             src={produto.fotoUrl}
@@ -265,7 +301,12 @@ function ProductCard({ produto }: { produto: Produto }) {
             Últimas unidades
           </span>
         )}
-      </div>
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">
+          <div className="bg-gold-500 rounded-full p-2">
+            <Plus className="w-5 h-5 text-forest-950" />
+          </div>
+        </div>
+      </motion.div>
 
       {/* Info */}
       <div className="p-3 flex flex-col flex-1 gap-2">
@@ -285,7 +326,7 @@ function ProductCard({ produto }: { produto: Produto }) {
 
           {qty === 0 ? (
             <button
-              onClick={() => addItem(produto)}
+              onClick={handleAdd}
               className="btn-gold p-1.5 rounded-xl"
             >
               <Plus className="w-4 h-4" />
@@ -389,6 +430,118 @@ function PromoCard({ promo }: { promo: Promocao }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function PersonalizarModal({ produto, onClose }: { produto: Produto; onClose: () => void }) {
+  const { addItem } = useCart();
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  const adicionais = produto.adicionais ?? [];
+  const extraTotal = adicionais
+    .filter((a) => selecionados.includes(a.id))
+    .reduce((s, a) => s + a.preco, 0);
+  const totalUnit = produto.preco + extraTotal;
+
+  const toggle = (id: string) =>
+    setSelecionados((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+
+  const handleAdicionar = () => {
+    const extras = adicionais
+      .filter((a) => selecionados.includes(a.id))
+      .map((a) => ({ nome: a.nome, preco: a.preco }));
+    addItem(produto, "", extras.length ? extras : undefined);
+    onClose();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{ background: "#F8FAFC" }}
+      >
+        {/* Foto + nome */}
+        <div className="relative h-44 bg-forest-800">
+          {produto.fotoUrl ? (
+            <Image src={produto.fotoUrl} alt={produto.nome} fill className="object-cover" sizes="384px" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Fish className="w-12 h-12 text-forest-600" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          <div className="absolute bottom-3 left-4 right-4">
+            <h2 className="text-white font-display font-bold text-xl leading-tight">{produto.nome}</h2>
+            {produto.descricao && (
+              <p className="text-white/70 text-xs mt-0.5">{produto.descricao}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Adicionais */}
+        <div className="p-4 space-y-3">
+          <p className="text-forest-700 font-semibold text-sm">Adicionais (opcional)</p>
+          <div className="space-y-2">
+            {adicionais.map((ad) => {
+              const sel = selecionados.includes(ad.id);
+              return (
+                <button
+                  key={ad.id}
+                  type="button"
+                  onClick={() => toggle(ad.id)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${
+                    sel
+                      ? "border-gold-500/50 bg-gold-500/10"
+                      : "border-forest-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      sel ? "border-gold-500 bg-gold-500" : "border-forest-300"
+                    }`}>
+                      {sel && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <span className="text-forest-800 text-sm font-medium">{ad.nome}</span>
+                  </div>
+                  <span className="text-gold-600 font-bold text-sm">+{formatCurrency(ad.preco)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Total + botão */}
+          <div className="pt-2 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-forest-500 text-sm">Total unitário</span>
+              <span className="gradient-gold-text font-bold text-lg">{formatCurrency(totalUnit)}</span>
+            </div>
+            <button
+              onClick={handleAdicionar}
+              className="btn-gold w-full py-3.5 rounded-2xl text-base"
+            >
+              <Plus className="w-5 h-5" /> Adicionar ao carrinho
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

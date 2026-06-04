@@ -20,6 +20,11 @@ function initAdminApp(): App {
     throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY inválida (JSON esperado).");
   }
 
+  // dotenv/Next.js às vezes dupla-escapa \n em strings multilinhas dentro do JSON
+  if (typeof serviceAccount.private_key === "string") {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+  }
+
   return initializeApp({
     credential: cert(serviceAccount as Parameters<typeof cert>[0]),
   });

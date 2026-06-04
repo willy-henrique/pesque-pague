@@ -16,8 +16,13 @@ import { formatCurrency } from "@/lib/utils";
 export default function Carrinho() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const searchParams = useSearchParams();
   const { modoAtendente } = useModoAtendenteAuth();
   const cart    = useCart();
+
+  // Em modo atendente, a identificação vem dos query params (lançado manualmente)
+  const clienteNomeParam = searchParams.get("clienteNome") ?? "";
+  const clienteTelParam  = searchParams.get("clienteTelefone") ?? "";
 
   const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
   const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
@@ -30,11 +35,24 @@ export default function Carrinho() {
   const handleEnviarPedido = async () => {
     if (isEmpty || enviando) return;
 
+    const piqueId = cart.piqueId ?? id;
+
+    // Modo atendente: usa params de URL; modo cliente: usa sessionStorage
+    let cliente: { nome: string; telefone: string };
+    if (modoAtendente && clienteNomeParam) {
+      cliente = { nome: clienteNomeParam, telefone: clienteTelParam };
+    } else {
+      const raw = sessionStorage.getItem(`cliente-${piqueId}`);
+      cliente = raw ? (JSON.parse(raw) as { nome: string; telefone: string }) : { nome: "", telefone: "" };
+    }
+
     setEnviando(true);
     try {
       await addDoc(collection(db, "pedidos"), {
-        piqueId: cart.piqueId ?? id,
+        piqueId,
         piqueNome: cart.piqueNome ?? `Mesa ${id}`,
+        nomeCliente: cliente.nome,
+        telefoneCliente: cliente.telefone,
         itens: cart.items,
         observacaoGeral: obsGeral.trim(),
         total: cart.total(),
@@ -148,11 +166,16 @@ export default function Carrinho() {
                       <h3 className="font-semibold text-forest-900 text-sm leading-tight truncate">
                         {item.nome}
                       </h3>
+                      {item.adicionaisSelecionados?.map((ad, i) => (
+                        <p key={i} className="text-forest-400 text-xs leading-tight">
+                          + {ad.nome} ({formatCurrency(ad.preco)})
+                        </p>
+                      ))}
                       <p className="gradient-gold-text font-bold text-sm mt-0.5">
                         {formatCurrency(item.preco * item.quantidade)}
                       </p>
                       {item.quantidade > 1 && (
-                        <p className="text-forest-9000 text-xs">
+                        <p className="text-forest-500 text-xs">
                           {item.quantidade}× {formatCurrency(item.preco)}
                         </p>
                       )}

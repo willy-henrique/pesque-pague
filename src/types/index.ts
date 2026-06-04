@@ -16,6 +16,12 @@ export interface Categoria {
   ativo: boolean;
 }
 
+export interface Adicional {
+  id: string;
+  nome: string;
+  preco: number;
+}
+
 export interface Produto {
   id: string;
   nome: string;
@@ -26,6 +32,8 @@ export interface Produto {
   categoriaNome?: string;
   estoque: number;
   ativo: boolean;
+  tipo?: ProdutoTipo;
+  adicionais?: Adicional[];
 }
 
 export type PiqueStatus = "livre" | "ocupado" | "reservado" | "bloqueado";
@@ -46,6 +54,8 @@ export interface Pique {
   reserva?: ReservaPique;
 }
 
+export type ProdutoTipo = "comida" | "bebida";
+
 export interface ItemPedido {
   produtoId: string;
   nome: string;
@@ -53,16 +63,23 @@ export interface ItemPedido {
   quantidade: number;
   fotoUrl: string;
   obs: string;
+  tipo?: ProdutoTipo;
+  adicionaisSelecionados?: { nome: string; preco: number }[];
 }
+
+export type FormaPagamento = "dinheiro" | "pix" | "credito" | "debito" | "misto";
 
 export interface Pedido {
   id: string;
   piqueId: string;
   piqueNome: string;
+  nomeCliente: string;
+  telefoneCliente: string;
   itens: ItemPedido[];
   observacaoGeral: string;
   total: number;
   status: OrderStatus;
+  formaPagamento?: FormaPagamento;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }

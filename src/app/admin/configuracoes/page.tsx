@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Settings, Store, Power, Save, Image as ImageIcon,
-  ShieldAlert, CheckCircle2,
+  ShieldAlert, CheckCircle2, Upload,
 } from "lucide-react";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { uploadImage } from "@/lib/cloudinary";
 import type { Config } from "@/types";
 import toast from "react-hot-toast";
 
@@ -21,6 +22,15 @@ export default function Configuracoes() {
   const [form, setForm]       = useState<Config>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [logoFile, setLogoFile]       = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!logoFile) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
 
   useEffect(() => {
     getDoc(doc(db, "config", "geral")).then((snap) => {
@@ -32,7 +42,14 @@ export default function Configuracoes() {
   const save = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "config", "geral"), form);
+      let logoUrl = form.logoUrl;
+      if (logoFile) {
+        logoUrl = await uploadImage(logoFile);
+        setLogoFile(null);
+      }
+      const updated = { ...form, logoUrl };
+      await setDoc(doc(db, "config", "geral"), updated);
+      setForm(updated);
       toast.success("Configurações salvas!");
     } catch {
       toast.error("Erro ao salvar.");
@@ -139,29 +156,47 @@ export default function Configuracoes() {
           <p className="text-forest-600 text-xs">Aparece na tela inicial do cliente.</p>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-2">
           <label className="text-forest-400 text-xs font-medium flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5" />
-            URL do logotipo (opcional)
+            Logotipo do estabelecimento
           </label>
-          <input
-            value={form.logoUrl}
-            onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-            placeholder="https://..."
-            className="input-field"
-          />
-          {form.logoUrl && (
-            <div className="mt-2 flex items-center gap-2">
+
+          {(logoPreview || form.logoUrl) && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-forest-800/40 border border-forest-700/40">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={form.logoUrl}
-                alt="Logo preview"
-                className="w-12 h-12 rounded-xl object-contain bg-forest-800 p-1"
+                src={logoPreview ?? form.logoUrl}
+                alt="Logo"
+                className="w-16 h-16 rounded-xl object-contain bg-forest-900 p-1 shrink-0"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
-              <p className="text-forest-500 text-xs">Pré-visualização do logo</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-forest-200 text-xs font-medium">
+                  {logoPreview ? "Novo logo (não salvo ainda)" : "Logo atual"}
+                </p>
+                {logoFile && (
+                  <p className="text-gold-400 text-[11px] mt-0.5 truncate">{logoFile.name}</p>
+                )}
+              </div>
             </div>
           )}
+
+          <label className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-forest-600 hover:border-gold-500 cursor-pointer transition-colors group">
+            <Upload className="w-4 h-4 text-forest-400 group-hover:text-gold-500 transition-colors" />
+            <span className="text-forest-300 text-sm group-hover:text-forest-100 transition-colors">
+              {form.logoUrl ? "Trocar logo" : "Enviar logo"}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <p className="text-forest-600 text-xs">
+            Aparece na tela inicial dos clientes. PNG ou JPG recomendado.
+          </p>
         </div>
       </motion.div>
 
