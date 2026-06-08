@@ -269,32 +269,20 @@ export default function PiqueLanding() {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="flex flex-col items-center gap-3"
         >
-          {config?.logoUrl ? (
-            <div
-              className="w-28 h-28 rounded-2xl overflow-hidden flex items-center justify-center"
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                boxShadow: "0 0 32px rgba(15,118,110,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={config.logoUrl}
-                alt={config.nomeEstabelecimento}
-                className="w-full h-full object-contain p-2"
-              />
-            </div>
-          ) : (
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, #0F766E 0%, #0D9488 100%)",
-                boxShadow: "0 0 32px rgba(15,118,110,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
-              }}
-            >
-              <Fish className="w-10 h-10 text-gold-500" />
-            </div>
-          )}
+          <div
+            className="w-28 h-28 rounded-2xl overflow-hidden flex items-center justify-center"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              boxShadow: "0 0 32px rgba(15,118,110,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={config?.logoUrl || "/logo-confraria.png"}
+              alt={config?.nomeEstabelecimento || "Confraria do Peixe"}
+              className="w-full h-full object-contain p-2"
+            />
+          </div>
           <div className="text-center">
             <p className="text-forest-900 font-display font-bold text-xl leading-tight">
               {config?.nomeEstabelecimento ?? "Confraria do Peixe"}

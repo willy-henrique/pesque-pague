@@ -410,11 +410,11 @@ export default function ComandaDoDia() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-forest-900 font-semibold text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-forest-900 font-semibold text-sm shrink-0">
                               #{pedido.id.slice(-4).toUpperCase()}
                             </span>
-                            <span className={`badge ${STATUS_CLASS[statusAtual]}`}>
+                            <span className={`badge shrink-0 ${STATUS_CLASS[statusAtual]}`}>
                               {STATUS_LABELS[statusAtual]}
                             </span>
                           </div>
