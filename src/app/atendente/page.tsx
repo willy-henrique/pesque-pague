@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X, BellRing, ChefHat, GlassWater } from "lucide-react";
@@ -53,6 +53,21 @@ export default function AtendentePage() {
     (p) => p.ativo && (p.status ?? "livre") !== "bloqueado"
   );
   const prontos = pedidos.filter((pedido) => isPedidoProntoParaRetirada(pedido));
+  const clientesPorMesa = useMemo(() => {
+    const mapa = new Map<string, string[]>();
+
+    for (const pedido of pedidos) {
+      if (pedido.status === "pago" || pedido.status === "cancelado") continue;
+      const nome = pedido.nomeCliente?.trim();
+      if (!nome) continue;
+
+      const atual = mapa.get(pedido.piqueId) ?? [];
+      if (!atual.includes(nome)) atual.push(nome);
+      mapa.set(pedido.piqueId, atual);
+    }
+
+    return mapa;
+  }, [pedidos]);
 
   return (
     <main
@@ -118,8 +133,13 @@ export default function AtendentePage() {
                         <p className="font-semibold text-forest-900 truncate">{pedido.piqueNome}</p>
                         <p className="text-forest-500 text-xs">
                           Pedido #{pedido.id.slice(-4).toUpperCase()}
-                          {pedido.nomeCliente ? ` · ${pedido.nomeCliente}` : ""}
                         </p>
+                        {pedido.nomeCliente && (
+                          <p className="text-water-600 text-xs font-medium truncate mt-1">
+                            Cliente: {pedido.nomeCliente}
+                            {pedido.telefoneCliente ? ` · ${pedido.telefoneCliente}` : ""}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-2 mt-2">
                           {setores.map((setor) => (
                             <span key={setor} className="badge status-entregue text-[11px]">
@@ -151,7 +171,9 @@ export default function AtendentePage() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-3">
-            {mesasDisponiveis.map((mesa) => (
+            {mesasDisponiveis.map((mesa) => {
+              const clientesMesa = clientesPorMesa.get(mesa.id) ?? [];
+              return (
               <article key={mesa.id} className="glass rounded-2xl p-4 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-forest-800 flex items-center justify-center shrink-0">
@@ -166,6 +188,11 @@ export default function AtendentePage() {
                     <p className="text-forest-500 text-xs">
                       {mesa.capacidade ? `${mesa.capacidade} lugares` : "Sem capacidade informada"}
                     </p>
+                    {clientesMesa.length > 0 && (
+                      <p className="text-water-600 text-xs font-medium mt-1 truncate">
+                        Cliente{clientesMesa.length > 1 ? "s" : ""}: {clientesMesa.join(", ")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -187,7 +214,8 @@ export default function AtendentePage() {
                   </Link>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

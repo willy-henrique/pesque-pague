@@ -105,6 +105,13 @@ export default function ComandaDoDia() {
     (p) => getStatusGeralPedido(p) === "entregue"
   );
   const temComandaVirada = pedidos.some((p) => p.criadoEm && isBeforeBrasiliaDay(p.criadoEm.toDate()));
+  const clientesDaComanda = Array.from(
+    new Set(
+      pedidos
+        .map((pedido) => pedido.nomeCliente?.trim())
+        .filter((nome): nome is string => Boolean(nome))
+    )
+  );
 
   const toggleAberto = (pedidoId: string) => {
     setAbertos((prev) => {
@@ -232,6 +239,11 @@ export default function ComandaDoDia() {
             <h1 className="font-bold text-forest-900 truncate text-base">
               {piqueNome || "Carregando..."}
             </h1>
+            {modoAtendente && clientesDaComanda.length > 0 && (
+              <p className="text-forest-500 text-xs truncate mt-0.5">
+                Cliente{clientesDaComanda.length > 1 ? "s" : ""}: {clientesDaComanda.join(", ")}
+              </p>
+            )}
           </div>
           {comandaId && (
             <div className="px-2.5 py-1 rounded-lg border border-gold-500/25 bg-gold-500/10 text-[11px] font-semibold text-gold-600 whitespace-nowrap">
@@ -410,6 +422,12 @@ export default function ComandaDoDia() {
                             {pedido.itens.length} {pedido.itens.length === 1 ? "item" : "itens"}
                             {pedido.criadoEm && ` · ${formatTime(pedido.criadoEm.toDate())}`}
                           </p>
+                          {modoAtendente && pedido.nomeCliente && (
+                            <p className="text-water-600 text-xs font-medium mt-1 truncate">
+                              Cliente: {pedido.nomeCliente}
+                              {pedido.telefoneCliente ? ` · ${pedido.telefoneCliente}` : ""}
+                            </p>
+                          )}
                           {setoresProntos.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {setoresProntos.map((setor) => (
