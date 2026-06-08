@@ -7,12 +7,41 @@ export async function getAuthBearerToken() {
 }
 
 export async function adminFetch(path: string, init?: RequestInit) {
-  const token = await getAuthBearerToken();
+  const request = async (forceRefresh = false) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Não autenticado.");
+
+    const token = await user.getIdToken(forceRefresh);
+    return fetch(path, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...init?.headers,
+      },
+    });
+  };
+
+  let res = await request();
+
+  if (res.status === 401) {
+    res = await request(true);
+  }
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof body.error === "string" ? body.error : "Falha na requisição."
+    );
+  }
+  return body;
+}
+
+export async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       ...init?.headers,
     },
   });

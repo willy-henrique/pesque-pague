@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Fish, Send, CheckCircle2 } from "lucide-react";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { serializeCartItems } from "@/lib/pedidos";
 import { useCart } from "@/store/cart";
+import { apiFetch } from "@/lib/auth-api";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 
@@ -19,7 +19,10 @@ export default function Confirmar() {
   const [loading, setLoading]     = useState(false);
   const [mounted, setMounted]     = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (mounted && cart.items.length === 0) {
@@ -36,33 +39,23 @@ export default function Confirmar() {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "pedidos"), {
-        piqueId,
-        piqueNome:       cart.piqueNome ?? `Mesa ${id}`,
-        nomeCliente:     cliente.nome,
-        telefoneCliente: cliente.telefone,
-        itens:           cart.items,
-        observacaoGeral: obsGeral.trim(),
-        total:           cart.total(),
-        status:          "novo",
-        criadoEm:        serverTimestamp(),
-        atualizadoEm:    serverTimestamp(),
+      await apiFetch("/api/pedidos", {
+        method: "POST",
+        body: JSON.stringify({
+          piqueId,
+          piqueNome:       cart.piqueNome ?? `Mesa ${id}`,
+          nomeCliente:     cliente.nome,
+          telefoneCliente: cliente.telefone,
+          itens:           serializeCartItems(cart.items),
+          observacaoGeral: obsGeral.trim(),
+        }),
       });
-
-      try {
-        await updateDoc(doc(db, "piques", cart.piqueId ?? id), {
-          status: "ocupado",
-        });
-      } catch {
-        // O cliente pode não ter permissão para atualizar a mesa.
-        // Não bloqueia o fluxo: pedido já foi registrado com sucesso.
-      }
 
       cart.clearCart();
       toast.success("Pedido enviado! Voltando ao cardápio...");
       router.replace(`/pique/${id}/cardapio`);
-    } catch {
-      toast.error("Erro ao enviar pedido. Tente novamente.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar pedido. Tente novamente.");
       setLoading(false);
     }
   };

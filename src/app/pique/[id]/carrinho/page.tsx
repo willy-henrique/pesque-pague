@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Minus, Plus, Trash2, ShoppingCart, Fish, MessageSquare, Receipt } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { useCart } from "@/store/cart";
-import { db } from "@/lib/firebase";
+import { serializeCartItems } from "@/lib/pedidos";
 import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { withModoAtendente } from "@/lib/atendente";
+import { apiFetch } from "@/lib/auth-api";
 import { formatCurrency } from "@/lib/utils";
 
 export default function Carrinho() {
@@ -48,30 +48,23 @@ export default function Carrinho() {
 
     setEnviando(true);
     try {
-      await addDoc(collection(db, "pedidos"), {
-        piqueId,
-        piqueNome: cart.piqueNome ?? `Mesa ${id}`,
-        nomeCliente: cliente.nome,
-        telefoneCliente: cliente.telefone,
-        itens: cart.items,
-        observacaoGeral: obsGeral.trim(),
-        total: cart.total(),
-        status: "novo",
-        criadoEm: serverTimestamp(),
-        atualizadoEm: serverTimestamp(),
+      await apiFetch("/api/pedidos", {
+        method: "POST",
+        body: JSON.stringify({
+          piqueId,
+          piqueNome: cart.piqueNome ?? `Mesa ${id}`,
+          nomeCliente: cliente.nome,
+          telefoneCliente: cliente.telefone,
+          itens: serializeCartItems(cart.items),
+          observacaoGeral: obsGeral.trim(),
+        }),
       });
-
-      try {
-        await updateDoc(doc(db, "piques", cart.piqueId ?? id), { status: "ocupado" });
-      } catch {
-        // Pedido enviado mesmo sem permissão para atualizar status da mesa.
-      }
 
       cart.clearCart();
       toast.success("Pedido enviado para a cozinha!");
       router.replace(modoAtendente ? comandaHref : cardapioHref);
-    } catch {
-      toast.error("Erro ao enviar pedido. Tente novamente.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar pedido. Tente novamente.");
       setEnviando(false);
     }
   };
