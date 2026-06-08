@@ -3,9 +3,9 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Banknote, Fish, CheckCircle2, ChevronDown,
+  Banknote, Fish, CheckCircle2, ChevronDown, ChevronUp,
   AlertCircle, X, TrendingUp, ShoppingBag, ReceiptText,
-  LockKeyhole, Clock, Flame, Bike, MapPin, UserRound,
+  LockKeyhole, Clock, Flame, Bike, MapPin, UserRound, Printer,
 } from "lucide-react";
 import {
   doc, updateDoc, addDoc, collection, serverTimestamp, getDoc,
@@ -413,6 +413,7 @@ export default function Caixa() {
                 grupo={grupo}
                 confirmando={confirmPique?.piqueId === grupo.piqueId}
                 recebendo={recebendo === grupo.piqueId}
+                nomeEstabelecimento={nomeEstabelecimento}
                 onToggleConfirm={() =>
                   setConfirmPique(
                     confirmPique?.piqueId === grupo.piqueId ? null : grupo
@@ -728,6 +729,7 @@ function ComandaCard({
   grupo,
   confirmando,
   recebendo,
+  nomeEstabelecimento,
   onToggleConfirm,
   onConfirmar,
   onCancelar,
@@ -735,6 +737,7 @@ function ComandaCard({
   grupo: ComandaGrupo;
   confirmando: boolean;
   recebendo: boolean;
+  nomeEstabelecimento: string;
   onToggleConfirm: () => void;
   onConfirmar: (forma: FormaPagamento, incluirServico: boolean) => void;
   onCancelar: () => void;
@@ -742,6 +745,7 @@ function ComandaCard({
   const [forma, setForma] = useState<FormaPagamento>("dinheiro");
   const [verificado, setVerificado] = useState(false);
   const [incluirServico, setIncluirServico] = useState(false);
+  const [expandido, setExpandido] = useState(false);
   const totalExibido = incluirServico ? grupo.total * 1.1 : grupo.total;
 
   const temVirada = grupo.pedidos.some(
@@ -817,12 +821,55 @@ function ComandaCard({
         </div>
 
         <button
+          type="button"
+          onClick={() => setExpandido((v) => !v)}
+          className="btn-ghost p-2 rounded-xl shrink-0"
+          title={expandido ? "Fechar comanda" : "Ver itens consumidos"}
+        >
+          {expandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        <button
           onClick={onToggleConfirm}
           className="btn-gold px-3 py-2 rounded-xl text-sm shrink-0"
         >
           Receber
         </button>
       </div>
+
+      {/* Seção expandida — itens consumidos + imprimir */}
+      <AnimatePresence>
+        {expandido && !confirmando && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-forest-200 dark:border-forest-700 px-4 py-4 space-y-3 bg-forest-50/60 dark:bg-forest-900/40">
+              <p className="text-forest-500 dark:text-forest-400 text-xs font-semibold uppercase tracking-widest">
+                Itens consumidos
+              </p>
+              {grupo.clientes.map((cliente, ci) => (
+                <ClienteSection key={ci} cliente={cliente} />
+              ))}
+              <div className="flex items-center justify-between pt-2 border-t border-forest-200 dark:border-forest-700">
+                <span className="font-semibold text-sm text-forest-800 dark:text-forest-100">Total</span>
+                <span className="font-bold text-gold-700 dark:text-gold-300">{formatCurrency(grupo.total)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => imprimirCupom(grupo, "dinheiro", nomeEstabelecimento, false)}
+                className="btn-ghost w-full py-2.5 rounded-xl text-sm border border-forest-200 dark:border-forest-700 flex items-center justify-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir comanda
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {confirmando && (

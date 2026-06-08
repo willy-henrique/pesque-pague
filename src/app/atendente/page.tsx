@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X, BellRing, ChefHat, GlassWater } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { useCollection, orderBy, where } from "@/hooks/useFirestore";
 import { useRequireAtendente } from "@/hooks/useRequireAtendente";
 import { auth } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
@@ -18,7 +18,10 @@ export default function AtendentePage() {
   const router = useRouter();
   const { usuario } = useRequireAtendente();
   const { data: piques, loading } = useCollection<Pique>("piques", [orderBy("numero", "asc")]);
-  const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "asc")]);
+  // Busca apenas pedidos ativos (excluindo pago/cancelado) sem orderBy para evitar índice composto
+  const { data: pedidos } = useCollection<Pedido>("pedidos", [
+    where("status", "not-in", ["pago", "cancelado"]),
+  ]);
 
   const [modalMesa, setModalMesa] = useState<Pique | null>(null);
   const [clienteNome, setClienteNome] = useState("");
