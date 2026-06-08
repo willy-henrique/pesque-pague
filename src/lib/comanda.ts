@@ -1,3 +1,4 @@
+import { getStatusGeralPedido } from "@/lib/pedido-status";
 import type { OrderStatus, Pedido } from "@/types";
 
 export function isPedidoAberto(status: OrderStatus) {
@@ -51,7 +52,7 @@ function countByStatus(pedidos: Pedido[]): Record<OrderStatus, number> {
     pago: 0,
     cancelado: 0,
   };
-  for (const p of pedidos) counts[p.status] += 1;
+  for (const p of pedidos) counts[getStatusGeralPedido(p)] += 1;
   return counts;
 }
 
@@ -60,7 +61,7 @@ export function groupComandasAbertas(pedidos: Pedido[]): ComandaGrupo[] {
   const map = new Map<string, ComandaGrupo>();
 
   for (const p of pedidos) {
-    if (!isPedidoAberto(p.status)) continue;
+    if (!isPedidoAberto(getStatusGeralPedido(p))) continue;
     const g = map.get(p.piqueId);
     if (g) {
       g.pedidos.push(p);
@@ -81,7 +82,7 @@ export function groupComandasAbertas(pedidos: Pedido[]): ComandaGrupo[] {
 
   const grupos = Array.from(map.values()).map((g) => {
     const contagemPorStatus = countByStatus(g.pedidos);
-    const prontaParaCobrar = g.pedidos.every((p) => p.status === "entregue");
+    const prontaParaCobrar = g.pedidos.every((p) => getStatusGeralPedido(p) === "entregue");
 
     const clienteMap = new Map<string, ClienteComanda>();
     for (const p of g.pedidos) {

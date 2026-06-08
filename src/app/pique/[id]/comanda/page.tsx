@@ -16,8 +16,9 @@ import { db } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
 import { getComandaDisplayId } from "@/lib/comanda";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { buildPedidoStatusAfterSetorUpdate, getSetoresProntos, getStatusGeralPedido } from "@/lib/pedido-status";
 import { canCancelOrder, formatCurrency, formatTime, isBeforeBrasiliaDay } from "@/lib/utils";
-import type { Pedido, OrderStatus } from "@/types";
+import type { Pedido, OrderStatus, SetorPedido } from "@/types";
 import { STATUS_LABELS } from "@/types";
 import toast from "react-hot-toast";
 
@@ -51,8 +52,6 @@ export default function ComandaDoDia() {
   const [abertos, setAbertos]       = useState<Set<string>>(new Set());
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [confirmandoPagamento, setConfirmandoPagamento] = useState(false);
-
-  const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
 
   // Carrega nome da mesa
   useEffect(() => {
@@ -93,8 +92,17 @@ export default function ComandaDoDia() {
 
   const totalGeral = pedidos.reduce((s, p) => s + p.total, 0);
   const comandaId = getComandaDisplayId(id, pedidos);
+  const pedidoMaisRecente = pedidos[0] ?? null;
+  const podeAdicionarPedidoAtendente = !modoAtendente || (!!pedidoMaisRecente?.nomeCliente && !!pedidoMaisRecente?.telefoneCliente);
+  const cardapioHref = (() => {
+    if (!modoAtendente) return `/pique/${id}/cardapio`;
+    const params = new URLSearchParams({ modo: "atendente" });
+    if (pedidoMaisRecente?.nomeCliente) params.set("clienteNome", pedidoMaisRecente.nomeCliente);
+    if (pedidoMaisRecente?.telefoneCliente) params.set("clienteTelefone", pedidoMaisRecente.telefoneCliente);
+    return `/pique/${id}/cardapio?${params.toString()}`;
+  })();
   const todosEntregues = pedidos.length > 0 && pedidos.every(
-    (p) => p.status === "entregue"
+    (p) => getStatusGeralPedido(p) === "entregue"
   );
   const temComandaVirada = pedidos.some((p) => p.criadoEm && isBeforeBrasiliaDay(p.criadoEm.toDate()));
 
@@ -109,7 +117,7 @@ export default function ComandaDoDia() {
 
   const cancelarPedido = async (pedido: Pedido) => {
     if (!pedido.criadoEm) return;
-    if (pedido.status !== "novo") return;
+    if (getStatusGeralPedido(pedido) !== "novo") return;
     if (!canCancelOrder(pedido.criadoEm.toDate())) {
       toast.error("Prazo de cancelamento expirado (4 minutos).");
       return;
@@ -126,6 +134,28 @@ export default function ComandaDoDia() {
       toast.error("Não foi possível cancelar o pedido.");
     } finally {
       setCancelandoId(null);
+    }
+  };
+
+  const confirmarEntrega = async (pedido: Pedido, setores: SetorPedido[]) => {
+    try {
+      const updates = setores.reduce<Record<string, unknown>>((acc, setor) => {
+        const next = buildPedidoStatusAfterSetorUpdate(
+          { ...pedido, ...acc } as Pedido,
+          setor,
+          "entregue"
+        );
+        return { ...acc, ...next };
+      }, {});
+
+      await updateDoc(doc(db, "pedidos", pedido.id), {
+        ...updates,
+        atualizadoEm: serverTimestamp(),
+      });
+
+      toast.success(`Entrega confirmada em ${pedido.piqueNome}.`);
+    } catch {
+      toast.error("Nao foi possivel confirmar a entrega.");
     }
   };
 
@@ -198,6 +228,7 @@ export default function ComandaDoDia() {
             type="button"
             onClick={() => router.push(cardapioHref)}
             className="btn-gold px-3 py-2 rounded-xl text-sm shrink-0"
+            disabled={modoAtendente && !podeAdicionarPedidoAtendente}
           >
             <Plus className="w-4 h-4" />
             Pedido
@@ -297,11 +328,11 @@ export default function ComandaDoDia() {
               )}
               <button
                 type="button"
-                onClick={() => router.push(cardapioHref)}
+                onClick={() => router.push(podeAdicionarPedidoAtendente ? cardapioHref : "/atendente")}
                 className="btn-gold px-6 py-3 rounded-2xl w-full"
               >
                 <Fish className="w-4 h-4" />
-                Novo pedido
+                {modoAtendente && !podeAdicionarPedidoAtendente ? "Identificar cliente" : "Novo pedido"}
               </button>
             </div>
           </motion.div>
@@ -312,10 +343,12 @@ export default function ComandaDoDia() {
             </p>
             <AnimatePresence mode="popLayout">
               {pedidos.map((pedido, i) => {
-                const Icon  = STATUS_ICON[pedido.status];
+                const statusAtual = getStatusGeralPedido(pedido);
+                const Icon  = STATUS_ICON[statusAtual];
                 const open  = abertos.has(pedido.id);
+                const setoresProntos = getSetoresProntos(pedido);
                 const podeCancelar =
-                  pedido.status === "novo" &&
+                  statusAtual === "novo" &&
                   !!pedido.criadoEm &&
                   canCancelOrder(pedido.criadoEm.toDate());
 
@@ -337,14 +370,14 @@ export default function ComandaDoDia() {
                       >
                         {/* Ícone de status */}
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          pedido.status === "novo"
+                          statusAtual === "novo"
                             ? "bg-gold-500/15 border border-gold-500/30"
                             : "bg-forest-800"
                         }`}>
                           <Icon className={`w-4 h-4 ${
-                            pedido.status === "novo" ? "text-gold-500" :
-                            pedido.status === "em_preparo" ? "text-water-300" :
-                            pedido.status === "saiu" ? "text-bark-300" :
+                            statusAtual === "novo" ? "text-gold-500" :
+                            statusAtual === "em_preparo" ? "text-water-300" :
+                            statusAtual === "saiu" ? "text-bark-300" :
                             "text-forest-400"
                           }`} />
                         </div>
@@ -354,14 +387,23 @@ export default function ComandaDoDia() {
                             <span className="text-forest-900 font-semibold text-sm">
                               #{pedido.id.slice(-4).toUpperCase()}
                             </span>
-                            <span className={`badge ${STATUS_CLASS[pedido.status]}`}>
-                              {STATUS_LABELS[pedido.status]}
+                            <span className={`badge ${STATUS_CLASS[statusAtual]}`}>
+                              {STATUS_LABELS[statusAtual]}
                             </span>
                           </div>
                           <p className="text-forest-500 text-xs mt-0.5">
                             {pedido.itens.length} {pedido.itens.length === 1 ? "item" : "itens"}
                             {pedido.criadoEm && ` · ${formatTime(pedido.criadoEm.toDate())}`}
                           </p>
+                          {setoresProntos.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {setoresProntos.map((setor) => (
+                                <span key={setor} className="badge status-entregue text-[11px]">
+                                  {setor === "cozinha" ? "Comida pronta" : "Bebida pronta"}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <p className="gradient-gold-text font-bold text-sm shrink-0">
@@ -431,6 +473,34 @@ export default function ComandaDoDia() {
                                 </p>
                               </div>
                             )}
+                            {modoAtendente && setoresProntos.length > 0 && (
+                              <div className="px-4 py-3 flex flex-col gap-2 bg-emerald-500/5">
+                                <p className="text-xs font-semibold text-emerald-700">
+                                  Pronto para retirar e levar para a mesa
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {setoresProntos.map((setor) => (
+                                    <button
+                                      key={setor}
+                                      type="button"
+                                      onClick={() => confirmarEntrega(pedido, [setor])}
+                                      className="btn-ghost px-3 py-2 rounded-xl text-xs border border-emerald-500/25 text-emerald-700"
+                                    >
+                                      Confirmar entrega {setor === "cozinha" ? "da comida" : "da bebida"}
+                                    </button>
+                                  ))}
+                                  {setoresProntos.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => confirmarEntrega(pedido, setoresProntos)}
+                                      className="btn-gold px-3 py-2 rounded-xl text-xs"
+                                    >
+                                      Entregar tudo
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       )}
@@ -473,11 +543,11 @@ export default function ComandaDoDia() {
               </div>
               <button
                 type="button"
-                onClick={() => router.push(cardapioHref)}
+                onClick={() => router.push(podeAdicionarPedidoAtendente ? cardapioHref : "/atendente")}
                 className="w-full py-2.5 rounded-xl text-sm text-forest-600 hover:text-forest-900 transition-colors"
               >
                 <Plus className="w-4 h-4 inline mr-1" />
-                Adicionar itens
+                {modoAtendente && !podeAdicionarPedidoAtendente ? "Identificar cliente para novo pedido" : "Adicionar itens"}
               </button>
             </div>
           ) : (

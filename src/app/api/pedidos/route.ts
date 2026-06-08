@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { parseJsonBody } from "@/lib/api-auth";
+import { buildPedidoStatusOnCreate } from "@/lib/pedido-status";
 import type { ItemPedido } from "@/types";
 
 export const runtime = "nodejs";
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
     }
 
     const db = getAdminDb();
+    const statusFields = buildPedidoStatusOnCreate({ itens } as { itens: ItemPedido[] });
     const ref = await db.collection("pedidos").add({
       piqueId,
       piqueNome: piqueNome || `Mesa ${piqueId}`,
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
       itens,
       observacaoGeral: cleanString(body.observacaoGeral, 300),
       total,
-      status: "novo",
+      ...statusFields,
       criadoEm: FieldValue.serverTimestamp(),
       atualizadoEm: FieldValue.serverTimestamp(),
     });

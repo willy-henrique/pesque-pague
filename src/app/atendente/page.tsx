@@ -3,20 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X } from "lucide-react";
+import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X, BellRing, ChefHat, GlassWater } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { useRequireAtendente } from "@/hooks/useRequireAtendente";
 import { auth } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
-import type { Pique } from "@/types";
+import { getSetoresProntos, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
+import type { Pique, Pedido } from "@/types";
 import toast from "react-hot-toast";
 
 export default function AtendentePage() {
   const router = useRouter();
   const { usuario } = useRequireAtendente();
   const { data: piques, loading } = useCollection<Pique>("piques", [orderBy("numero", "asc")]);
+  const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "asc")]);
 
   const [modalMesa, setModalMesa] = useState<Pique | null>(null);
   const [clienteNome, setClienteNome] = useState("");
@@ -37,6 +39,7 @@ export default function AtendentePage() {
   const confirmarEIrAoCardapio = () => {
     if (!modalMesa) return;
     if (!clienteNome.trim()) return toast.error("Informe o nome do cliente.");
+    if (!clienteTel.trim()) return toast.error("Informe o telefone do cliente.");
     const params = new URLSearchParams({
       modo: "atendente",
       clienteNome: clienteNome.trim(),
@@ -49,6 +52,7 @@ export default function AtendentePage() {
   const mesasDisponiveis = piques.filter(
     (p) => p.ativo && (p.status ?? "livre") !== "bloqueado"
   );
+  const prontos = pedidos.filter((pedido) => isPedidoProntoParaRetirada(pedido));
 
   return (
     <main
@@ -81,6 +85,57 @@ export default function AtendentePage() {
             Para lançar pedido manualmente, informe o nome e telefone do cliente antes de ir ao cardápio.
           </p>
         </header>
+
+        <section className="glass rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <BellRing className="w-5 h-5 text-gold-500" />
+            <div>
+              <h2 className="font-semibold text-forest-900">Prontos para entregar</h2>
+              <p className="text-forest-500 text-sm">
+                {prontos.length === 0 ? "Nenhum pedido pronto agora" : `${prontos.length} pedido(s) aguardando retirada`}
+              </p>
+            </div>
+          </div>
+
+          {prontos.length === 0 ? (
+            <p className="text-sm text-forest-500">Quando cozinha ou bar marcarem um pedido como pronto, ele aparece aqui com a mesa correta.</p>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-3">
+              {prontos.map((pedido) => {
+                const setores = getSetoresProntos(pedido);
+                return (
+                  <button
+                    key={pedido.id}
+                    type="button"
+                    onClick={() => router.push(withModoAtendente(`/pique/${pedido.piqueId}/comanda`))}
+                    className="text-left glass rounded-2xl p-4 border border-gold-500/20 hover:border-gold-500/40 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gold-500/15 flex items-center justify-center shrink-0">
+                        <Receipt className="w-5 h-5 text-gold-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-forest-900 truncate">{pedido.piqueNome}</p>
+                        <p className="text-forest-500 text-xs">
+                          Pedido #{pedido.id.slice(-4).toUpperCase()}
+                          {pedido.nomeCliente ? ` · ${pedido.nomeCliente}` : ""}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {setores.map((setor) => (
+                            <span key={setor} className="badge status-entregue text-[11px]">
+                              {setor === "cozinha" ? <ChefHat className="w-3 h-3" /> : <GlassWater className="w-3 h-3" />}
+                              {setor === "cozinha" ? "Comida pronta" : "Bebida pronta"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {loading ? (
           <div className="grid sm:grid-cols-2 gap-3">
@@ -181,7 +236,7 @@ export default function AtendentePage() {
                 </div>
                 <div>
                   <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
-                    <Phone className="w-3 h-3" /> Telefone (opcional)
+                    <Phone className="w-3 h-3" /> Telefone do cliente *
                   </label>
                   <input
                     value={clienteTel}
@@ -197,7 +252,7 @@ export default function AtendentePage() {
               <button
                 type="button"
                 onClick={confirmarEIrAoCardapio}
-                disabled={!clienteNome.trim()}
+                disabled={!clienteNome.trim() || !clienteTel.trim()}
                 className="btn-gold w-full py-3 rounded-xl disabled:opacity-50"
               >
                 Ir ao cardápio

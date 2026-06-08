@@ -45,6 +45,10 @@ export default function Carrinho() {
       const raw = sessionStorage.getItem(`cliente-${piqueId}`);
       cliente = raw ? (JSON.parse(raw) as { nome: string; telefone: string }) : { nome: "", telefone: "" };
     }
+    if (modoAtendente) {
+      if (!cliente.nome.trim()) return toast.error("Informe o nome do cliente para o pedido.");
+      if (!cliente.telefone.trim()) return toast.error("Informe o telefone do cliente para o pedido.");
+    }
 
     setEnviando(true);
     try {

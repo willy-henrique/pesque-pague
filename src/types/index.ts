@@ -8,6 +8,9 @@ export type OrderStatus =
   | "pago"
   | "cancelado";
 
+export type SetorPedido = "cozinha" | "bar";
+export type SetorOrderStatus = "novo" | "em_preparo" | "pronto" | "entregue";
+
 export interface Categoria {
   id: string;
   nome: string;
@@ -79,6 +82,8 @@ export interface Pedido {
   observacaoGeral: string;
   total: number;
   status: OrderStatus;
+  cozinhaStatus?: SetorOrderStatus;
+  barStatus?: SetorOrderStatus;
   formaPagamento?: FormaPagamento;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
