@@ -6,7 +6,7 @@ import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet, XCircle,
-  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote,
+  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote, Store,
 } from "lucide-react";
 import {
   collection, query, where, onSnapshot,
@@ -185,6 +185,20 @@ export default function ComandaDoDia() {
         } finally {
           setConfirmandoPagamento(false);
         }
+      },
+    });
+  };
+
+  const deixarPagamentoNoPdv = () => {
+    if (pedidos.length === 0) return;
+    confirm({
+      title: "Deixar pagamento para o PDV?",
+      description: `A comanda de ${piqueNome} continuará em aberto para pagamento no PDV. A mesa não será liberada agora.`,
+      confirmLabel: "Enviar para o PDV",
+      variant: "default",
+      onConfirm: async () => {
+        toast.success("Comanda mantida em aberto para pagamento no PDV.");
+        router.push("/atendente");
       },
     });
   };
@@ -542,6 +556,15 @@ export default function ComandaDoDia() {
                   {confirmandoPagamento ? "..." : "Confirmar pagamento"}
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={deixarPagamentoNoPdv}
+                disabled={confirmandoPagamento}
+                className="btn-ghost w-full py-3 rounded-xl text-sm border border-gold-500/20 text-gold-700 disabled:opacity-60"
+              >
+                <Store className="w-4 h-4" />
+                Deixar pagamento para o PDV
+              </button>
               <button
                 type="button"
                 onClick={() => router.push(podeAdicionarPedidoAtendente ? cardapioHref : "/atendente")}
