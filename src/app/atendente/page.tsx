@@ -10,7 +10,7 @@ import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { useRequireAtendente } from "@/hooks/useRequireAtendente";
 import { auth } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
-import { getSetoresProntos, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
+import { getSetoresDoPedido, getSetoresProntos, getStatusGeralPedido, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
 import type { Pique, Pedido } from "@/types";
 import toast from "react-hot-toast";
 
@@ -52,7 +52,10 @@ export default function AtendentePage() {
   const mesasDisponiveis = piques.filter(
     (p) => p.ativo && (p.status ?? "livre") !== "bloqueado"
   );
-  const prontos = pedidos.filter((pedido) => isPedidoProntoParaRetirada(pedido));
+  const prontos = pedidos.filter((pedido) => {
+    if (isPedidoProntoParaRetirada(pedido)) return true;
+    return getStatusGeralPedido(pedido) === "saiu";
+  });
   const clientesPorMesa = useMemo(() => {
     const mapa = new Map<string, string[]>();
 
@@ -118,6 +121,12 @@ export default function AtendentePage() {
             <div className="grid md:grid-cols-2 gap-3">
               {prontos.map((pedido) => {
                 const setores = getSetoresProntos(pedido);
+                const setoresExibidos =
+                  setores.length > 0
+                    ? setores
+                    : getStatusGeralPedido(pedido) === "saiu"
+                    ? getSetoresDoPedido(pedido)
+                    : [];
                 return (
                   <button
                     key={pedido.id}
@@ -141,7 +150,7 @@ export default function AtendentePage() {
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {setores.map((setor) => (
+                          {setoresExibidos.map((setor) => (
                             <span key={setor} className="badge status-entregue text-[11px]">
                               {setor === "cozinha" ? <ChefHat className="w-3 h-3" /> : <GlassWater className="w-3 h-3" />}
                               {setor === "cozinha" ? "Comida pronta" : "Bebida pronta"}
