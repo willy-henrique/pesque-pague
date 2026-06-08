@@ -11,6 +11,7 @@ import { useRequireAtendente } from "@/hooks/useRequireAtendente";
 import { auth } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
 import { getSetoresDoPedido, getSetoresProntos, getStatusGeralPedido, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
+import { formatarTelefone } from "@/lib/utils";
 import type { Pique, Pedido } from "@/types";
 import toast from "react-hot-toast";
 
@@ -280,10 +281,11 @@ export default function AtendentePage() {
                   </label>
                   <input
                     value={clienteTel}
-                    onChange={(e) => setClienteTel(e.target.value)}
+                    onChange={(e) => setClienteTel(formatarTelefone(e.target.value))}
                     onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
                     placeholder="(00) 00000-0000"
                     type="tel"
+                    inputMode="numeric"
                     className="input-field"
                   />
                 </div>

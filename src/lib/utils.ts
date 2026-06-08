@@ -84,6 +84,22 @@ export function getPublicAppUrl() {
   return "";
 }
 
+/** Aplica máscara de telefone brasileiro: (XX) XXXX-XXXX ou (XX) XXXXX-XXXX */
+export function formatarTelefone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  const n = digits.length;
+  if (n === 0) return "";
+  if (n <= 2) return `(${digits}`;
+  if (n <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (n <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/** Compara dois telefones ignorando formatação (apenas dígitos) */
+export function telefonesIguais(a: string, b: string): boolean {
+  return a.replace(/\D/g, "") === b.replace(/\D/g, "");
+}
+
 export function buildPiquePublicUrl(piqueId: string) {
   const base = getPublicAppUrl();
   if (!base) return `/pique/${piqueId}`;

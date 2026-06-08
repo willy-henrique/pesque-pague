@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { useCart } from "@/store/cart";
 import type { Pique, Config } from "@/types";
 import { useState } from "react";
-import { getBrasiliaDateKey } from "@/lib/utils";
+import { getBrasiliaDateKey, formatarTelefone, telefonesIguais } from "@/lib/utils";
 
 const CLIENTE_KEY = (piqueId: string) => `cliente-${piqueId}`;
 
@@ -116,7 +116,7 @@ export default function PiqueLanding() {
 
   const liberarReserva = () => {
     if (!pique?.reserva) return;
-    if (senhaReserva.trim() !== pique.reserva.telefone.trim()) return;
+    if (!telefonesIguais(senhaReserva, pique.reserva.telefone)) return;
     sessionStorage.setItem(`reserva-auth-${pique.id}`, senhaReserva.trim());
     sessionStorage.setItem(
       CLIENTE_KEY(pique.id),
@@ -154,8 +154,10 @@ export default function PiqueLanding() {
 
           <input
             value={senhaReserva}
-            onChange={(e) => setSenhaReserva(e.target.value)}
-            placeholder="Telefone da reserva"
+            onChange={(e) => setSenhaReserva(formatarTelefone(e.target.value))}
+            placeholder="(00) 00000-0000"
+            type="tel"
+            inputMode="numeric"
             className="input-field"
           />
 
@@ -227,10 +229,11 @@ export default function PiqueLanding() {
               </label>
               <input
                 value={telefoneForm}
-                onChange={(e) => setTelefoneForm(e.target.value)}
+                onChange={(e) => setTelefoneForm(formatarTelefone(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && confirmarIdentificacao()}
                 placeholder="(00) 00000-0000"
                 type="tel"
+                inputMode="numeric"
                 className="input-field"
               />
             </div>

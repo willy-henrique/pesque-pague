@@ -18,6 +18,7 @@ import {
   buildPiquePublicUrl,
   formatCurrency,
   formatTime,
+  formatarTelefone,
   getBrasiliaDateKey,
   isBeforeBrasiliaDay,
 } from "@/lib/utils";
@@ -634,8 +635,10 @@ font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir / Salvar PDF</b
                   <label className="block text-sm font-medium text-forest-700 mb-1.5">Telefone (senha)</label>
                   <input
                     value={reservaForm.telefone}
-                    onChange={(e) => setReservaForm({ ...reservaForm, telefone: e.target.value })}
-                    placeholder="(xx) xxxxx-xxxx"
+                    onChange={(e) => setReservaForm({ ...reservaForm, telefone: formatarTelefone(e.target.value) })}
+                    placeholder="(00) 00000-0000"
+                    type="tel"
+                    inputMode="numeric"
                     className="input-field"
                   />
                 </div>
