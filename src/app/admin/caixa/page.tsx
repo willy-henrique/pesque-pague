@@ -141,10 +141,10 @@ function buildCupomHtml(
     <span class="bold">${FORMA_IMPRESSAO[forma]}</span>
   </div>
   <div class="sep"></div>
-  <div class="center">Obrigado pela visita!</div>
+  <div class="center">Obrigado pela preferência!</div>
   <div class="center">Volte sempre :)</div>
   <div class="sep"></div>
-  <div class="center footer">Powered by WillTech Pesqueiros</div>
+  <div class="center footer">Powered by Confraria do Peixe</div>
 </body>
 </html>`;
 }
@@ -187,7 +187,7 @@ export default function Caixa() {
   const [pagoExpandido, setPagoExpandido]     = useState(false);
   const [recebendo, setRecebendo]             = useState<string | null>(null);
   const [notaGrupo, setNotaGrupo]             = useState<{ grupo: ComandaGrupo; forma: FormaPagamento; incluirServico: boolean } | null>(null);
-  const [nomeEstabelecimento, setNomeEstabelecimento] = useState("WillTech Pesqueiros");
+  const [nomeEstabelecimento, setNomeEstabelecimento] = useState("Confraria do Peixe");
 
   useEffect(() => {
     getDoc(doc(db, "config", "geral")).then((snap) => {
@@ -687,10 +687,10 @@ export default function Caixa() {
 
               {/* Rodapé cupom */}
               <div className="px-5 pt-2 pb-1 text-center font-mono text-[10px] text-forest-400">
-                Obrigado pela visita! Volte sempre :)
+                Obrigado pela preferência! Volte sempre :)
               </div>
               <div className="pb-4 text-center font-mono text-[9px] text-forest-300">
-                Powered by WillTech Pesqueiros
+                Powered by Confraria do Peixe
               </div>
 
               {/* Ações */}
@@ -775,10 +775,11 @@ function ComandaCard({
               #{grupo.comandaId}
             </span>
           </div>
-          {grupo.pedidos[0]?.nomeCliente && (
+          {grupo.clientes.length > 0 && (
             <p className="text-water-500 dark:text-water-400 text-xs font-medium truncate">
-              {grupo.pedidos[0].nomeCliente}
-              {grupo.pedidos[0].telefoneCliente && ` · ${grupo.pedidos[0].telefoneCliente}`}
+              {grupo.clientes.length === 1
+                ? `${grupo.clientes[0].nome}${grupo.clientes[0].telefone ? ` · ${grupo.clientes[0].telefone}` : ""}`
+                : `${grupo.clientes.map((c) => c.nome).join(", ")}`}
             </p>
           )}
           <p className="text-forest-500 dark:text-forest-400 text-xs mt-0.5">

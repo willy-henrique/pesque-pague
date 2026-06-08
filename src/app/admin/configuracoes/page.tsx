@@ -13,7 +13,7 @@ import type { Config } from "@/types";
 import toast from "react-hot-toast";
 
 const DEFAULT: Config = {
-  nomeEstabelecimento: "WillTech Pesqueiros",
+  nomeEstabelecimento: "Confraria do Peixe",
   logoUrl: "",
   modoManutencao: false,
 };
@@ -239,7 +239,7 @@ export default function Configuracoes() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-forest-300 text-sm">Versão do sistema</p>
-            <p className="text-forest-600 text-xs">WillTech Pesqueiros v1.0</p>
+            <p className="text-forest-600 text-xs">Confraria do Peixe · WillTech v1.0</p>
           </div>
           <CheckCircle2 className="w-5 h-5 text-forest-600" />
         </div>

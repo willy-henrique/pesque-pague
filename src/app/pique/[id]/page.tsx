@@ -297,7 +297,7 @@ export default function PiqueLanding() {
           )}
           <div className="text-center">
             <p className="text-forest-900 font-display font-bold text-xl leading-tight">
-              {config?.nomeEstabelecimento ?? "WillTech Pesqueiros"}
+              {config?.nomeEstabelecimento ?? "Confraria do Peixe"}
             </p>
           </div>
         </motion.div>

@@ -1,7 +1,7 @@
 {
-  "name": "WillTech Pesqueiros",
-  "short_name": "Pesqueiros",
-  "description": "Faça seu pedido direto do seu pique.",
+  "name": "Confraria do Peixe",
+  "short_name": "Confraria",
+  "description": "Faça seu pedido direto da sua mesa.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#061208",

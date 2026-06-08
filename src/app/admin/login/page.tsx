@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Fish, Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import type { Config } from "@/types";
 import toast from "react-hot-toast";
+
+const NOME_PADRAO = "Confraria do Peixe";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -14,6 +18,16 @@ export default function AdminLogin() {
   const [senha, setSenha]     = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [config, setConfig]   = useState<Config | null>(null);
+
+  useEffect(() => {
+    getDoc(doc(db, "config", "geral")).then((snap) => {
+      if (snap.exists()) setConfig(snap.data() as Config);
+    });
+  }, []);
+
+  const nomeEstab = config?.nomeEstabelecimento || NOME_PADRAO;
+  const logoUrl   = config?.logoUrl || "/logo-confraria.png";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,28 +48,41 @@ export default function AdminLogin() {
         className="hidden lg:flex flex-col justify-between w-[420px] shrink-0 p-10"
         style={{ background: "#0F172A" }}
       >
+        {/* Logo e nome */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "#0F766E" }}>
-            <Fish className="w-4 h-4 text-white" />
+          <div
+            className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+            style={{ background: "rgba(15,118,110,0.15)", border: "1px solid rgba(13,148,136,0.3)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
+              alt={nomeEstab}
+              className="w-full h-full object-contain p-1"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                const parent = (e.currentTarget as HTMLImageElement).parentElement;
+                if (parent) parent.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6s-7.56-2.54-8.5-6Z"/><path d="M18 12h.5"/><path d="m2 12 1.5 1.5L5 12l-1.5-1.5L2 12Z"/></svg>';
+              }}
+            />
           </div>
           <div>
-            <p className="text-white font-semibold text-sm">WillTech</p>
-            <p className="text-forest-400 text-xs">Pesqueiros</p>
+            <p className="text-white font-bold text-sm leading-tight">{nomeEstab}</p>
+            <p className="text-slate-400 text-xs mt-0.5">Painel Administrativo</p>
           </div>
         </div>
 
         <div>
           <h2 className="text-white text-3xl font-bold leading-tight">
             Sistema de gestão<br />
-            <span style={{ color: "#0D9488" }}>para pesqueiros.</span>
+            <span style={{ color: "#0D9488" }}>completo.</span>
           </h2>
-          <p className="text-forest-400 mt-4 text-sm leading-relaxed">
+          <p className="text-slate-400 mt-4 text-sm leading-relaxed">
             Controle de pedidos, mesas, cozinha, caixa e relatórios — tudo em um só lugar.
           </p>
         </div>
 
-        <p className="text-forest-600 text-xs">© 2025 WillTech Pesqueiros</p>
+        <p className="text-slate-600 text-xs">© 2025 {nomeEstab} · Powered by WillTech</p>
       </div>
 
       {/* Right login panel */}
@@ -68,11 +95,39 @@ export default function AdminLogin() {
         >
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "#0F766E" }}>
-              <Fish className="w-4 h-4 text-white" />
+            <div
+              className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+              style={{ background: "rgba(15,118,110,0.1)", border: "1px solid rgba(13,148,136,0.2)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={nomeEstab}
+                className="w-full h-full object-contain p-1"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
             </div>
-            <p className="font-semibold text-forest-900">WillTech Pesqueiros</p>
+            <div>
+              <p className="font-bold text-forest-900 text-sm leading-tight">{nomeEstab}</p>
+              <p className="text-forest-500 text-xs">Painel Administrativo</p>
+            </div>
+          </div>
+
+          {/* Logo centralizada (desktop, acima do form) */}
+          <div className="hidden lg:flex flex-col items-center mb-8">
+            <div
+              className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-3"
+              style={{ background: "rgba(15,118,110,0.08)", border: "1.5px solid rgba(13,148,136,0.2)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={nomeEstab}
+                className="w-full h-full object-contain p-2"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+            <p className="font-bold text-forest-900 text-base">{nomeEstab}</p>
           </div>
 
           <div className="mb-8">

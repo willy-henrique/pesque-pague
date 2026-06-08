@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Fish, Send, CheckCircle2 } from "lucide-react";
@@ -17,6 +17,15 @@ export default function Confirmar() {
 
   const [obsGeral, setObsGeral]   = useState("");
   const [loading, setLoading]     = useState(false);
+  const [mounted, setMounted]     = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (mounted && cart.items.length === 0) {
+      router.replace(`/pique/${id}/cardapio`);
+    }
+  }, [mounted, cart.items.length, id, router]);
 
   const handleEnviar = async () => {
     if (cart.items.length === 0) return;
@@ -58,10 +67,7 @@ export default function Confirmar() {
     }
   };
 
-  if (cart.items.length === 0) {
-    router.replace(`/pique/${id}/cardapio`);
-    return null;
-  }
+  if (!mounted || cart.items.length === 0) return null;
 
   return (
     <main className="min-h-dvh flex flex-col" style={{ background: "#F8FAFC" }}>
@@ -155,7 +161,7 @@ export default function Confirmar() {
           <p className="text-forest-300 text-sm text-center leading-relaxed">
             O pagamento de{" "}
             <span className="gradient-gold-text font-bold">{formatCurrency(cart.total())}</span>
-            {" "}será realizado no caixa ao encerrar sua pescaria.
+            {" "}será realizado no caixa ao encerrar o consumo.
           </p>
         </motion.div>
       </div>

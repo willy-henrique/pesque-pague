@@ -209,7 +209,7 @@ export default function Piques() {
 
   const printQr = async (pique: Pique) => {
     const url = buildPiquePublicUrl(pique.id);
-    let estabelecimento = "WillTech Pesqueiros";
+    let estabelecimento = "Confraria do Peixe";
     try {
       const snap = await getDoc(doc(db, "config", "geral"));
       if (snap.exists()) estabelecimento = snap.data().nomeEstabelecimento || estabelecimento;

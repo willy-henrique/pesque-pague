@@ -10,7 +10,7 @@ import { useCollection, orderBy } from "@/hooks/useFirestore";
 import type { Config, Pique } from "@/types";
 
 const DEFAULT_CONFIG: Config = {
-  nomeEstabelecimento: "WillTech Pesqueiros",
+  nomeEstabelecimento: "Confraria do Peixe",
   logoUrl: "",
   modoManutencao: false,
 };

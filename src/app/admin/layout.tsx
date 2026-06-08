@@ -10,8 +10,10 @@ import {
   ChefHat, Moon, Sun, UserRound, GlassWater,
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import type { Config } from "@/types";
 import { isPedidoAberto } from "@/lib/comanda";
 import { bootstrapAdminIfNeeded, canAccessAdmin, fetchUsuario } from "@/lib/usuarios";
 import type { Pedido } from "@/types";
@@ -52,13 +54,26 @@ function useTheme() {
   return { dark, toggle };
 }
 
+const NOME_PADRAO = "Confraria do Peixe";
+const LOGO_PADRAO = "/logo-confraria.png";
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { dark, toggle } = useTheme();
   const [authed, setAuthed]           = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [config, setConfig]           = useState<Config | null>(null);
   const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "desc")]);
+
+  useEffect(() => {
+    getDoc(doc(db, "config", "geral")).then((snap) => {
+      if (snap.exists()) setConfig(snap.data() as Config);
+    });
+  }, []);
+
+  const nomeEstab = config?.nomeEstabelecimento || NOME_PADRAO;
+  const logoUrl   = config?.logoUrl || LOGO_PADRAO;
 
   const comandasAbertas = new Set(
     pedidos.filter((p) => isPedidoAberto(p.status)).map((p) => p.piqueId)
@@ -130,6 +145,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           navBadges={navBadges}
           onToggleTheme={toggle}
           onLogout={handleLogout}
+          nomeEstab={nomeEstab}
+          logoUrl={logoUrl}
         />
       </aside>
 
@@ -167,6 +184,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 onToggleTheme={toggle}
                 onLogout={handleLogout}
                 onNavClick={() => setSidebarOpen(false)}
+                nomeEstab={nomeEstab}
+                logoUrl={logoUrl}
               />
             </motion.aside>
           </>
@@ -184,11 +203,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-gold-600">
-              <Fish className="w-3.5 h-3.5 text-white" />
+            <div
+              className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
+              style={{ background: "rgba(15,118,110,0.1)", border: "1px solid rgba(13,148,136,0.2)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={nomeEstab}
+                className="w-full h-full object-contain p-0.5"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  const el = document.createElement("span");
+                  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6s-7.56-2.54-8.5-6Z"/></svg>`;
+                  (e.currentTarget as HTMLImageElement).parentElement?.appendChild(el);
+                }}
+              />
             </div>
-            <span className="font-semibold text-sm text-forest-900 dark:text-forest-50">
-              WillTech
+            <span className="font-semibold text-sm text-forest-900 dark:text-forest-50 truncate">
+              {nomeEstab}
             </span>
           </div>
           <button
@@ -215,6 +248,8 @@ function SidebarContent({
   onToggleTheme,
   onLogout,
   onNavClick,
+  nomeEstab,
+  logoUrl,
 }: {
   pathname: string;
   dark: boolean;
@@ -222,18 +257,36 @@ function SidebarContent({
   onToggleTheme: () => void;
   onLogout: () => void;
   onNavClick?: () => void;
+  nomeEstab: string;
+  logoUrl: string;
 }) {
   return (
     <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "#0F766E" }}>
-            <Fish className="w-4 h-4 text-white" />
+          {/* Logo do estabelecimento */}
+          <div
+            className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+            style={{ background: "rgba(15,118,110,0.15)", border: "1px solid rgba(13,148,136,0.3)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
+              alt={nomeEstab}
+              className="w-full h-full object-contain p-0.5"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+                if (wrap) {
+                  wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="2"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6s-7.56-2.54-8.5-6Z"/><path d="M18 12h.5"/></svg>`;
+                }
+              }}
+            />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-sm leading-none">WillTech</p>
-            <p className="text-slate-300 text-[11px] mt-0.5">Pesqueiros</p>
+            <p className="text-white font-bold text-sm leading-tight truncate">{nomeEstab}</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">Painel Admin</p>
           </div>
           {/* Theme toggle in sidebar */}
           <button

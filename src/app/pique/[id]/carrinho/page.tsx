@@ -262,7 +262,7 @@ export default function Carrinho() {
               />
             </div>
             <p className="text-forest-9000 text-xs text-center">
-              Pagamento realizado no caixa ao final da pescaria.
+              Pagamento realizado no caixa ao encerrar o consumo.
             </p>
             <button
               onClick={handleEnviarPedido}

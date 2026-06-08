@@ -17,7 +17,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: { default: "WillTech Pesqueiros", template: "%s | WillTech Pesqueiros" },
+  title: { default: "Confraria do Peixe", template: "%s | Confraria do Peixe" },
   description: "Faça seu pedido direto da sua mesa. Bebidas, petiscos e muito mais.",
   manifest: "/manifest.json",
 };
