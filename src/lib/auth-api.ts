@@ -1,5 +1,7 @@
 import { auth } from "@/lib/firebase";
 
+const DEFAULT_FIXED_ADMIN_TOKEN = "WILLTECH_ADMIN_FIXED_TOKEN";
+
 export async function getAuthBearerToken() {
   const user = auth.currentUser;
   if (!user) throw new Error("Não autenticado.");
@@ -9,14 +11,16 @@ export async function getAuthBearerToken() {
 export async function adminFetch(path: string, init?: RequestInit) {
   const request = async (forceRefresh = false) => {
     const user = auth.currentUser;
-    if (!user) throw new Error("Não autenticado.");
+    const token = user ? await user.getIdToken(forceRefresh) : "";
+    const fixedToken =
+      process.env.NEXT_PUBLIC_ADMIN_FIXED_TOKEN?.trim() || DEFAULT_FIXED_ADMIN_TOKEN;
 
-    const token = await user.getIdToken(forceRefresh);
     return fetch(path, {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "x-admin-token": fixedToken,
         ...init?.headers,
       },
     });
