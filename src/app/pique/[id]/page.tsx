@@ -328,7 +328,7 @@ export default function PiqueLanding() {
           <p className="text-forest-700 text-sm leading-relaxed mt-2">
             Faça seu pedido pelo celular e receba direto na sua mesa.
             <br />
-            <span className="text-bark-300">Pagamento no caixa ao finalizar.</span>
+            <span className="text-bark-300">Os pedidos seguem direto para o PDV.</span>
           </p>
         </motion.div>
 

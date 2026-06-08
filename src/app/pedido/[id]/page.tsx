@@ -180,7 +180,7 @@ export default function RastreamentoPedido() {
           </div>
         </div>
 
-        {/* Pague no caixa */}
+        {/* Resumo do envio */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -196,17 +196,20 @@ export default function RastreamentoPedido() {
           {isPago ? (
             <>
               <CheckCircle2 className="w-8 h-8 text-forest-400 mx-auto mb-2" />
-              <p className="text-forest-700 font-semibold">Pago! Obrigado e bom apetite!</p>
-              <p className="text-forest-500 text-sm mt-1">Obrigado pela preferência!</p>
+              <p className="text-forest-700 font-semibold">Pedido encerrado.</p>
+              <p className="text-forest-500 text-sm mt-1">Obrigado pela preferência.</p>
             </>
           ) : (
             <>
               <Wallet className="w-8 h-8 text-gold-500 mx-auto mb-2" />
               <p className="text-forest-900 font-semibold">
-                Pague no caixa ao encerrar o consumo
+                Pedido em andamento no atendimento
               </p>
               <p className="gradient-gold-text font-bold text-xl font-display mt-1">
                 {formatCurrency(pedido.total)}
+              </p>
+              <p className="text-forest-500 text-sm mt-1">
+                O pedido foi enviado ao PDV e segue para preparo/entrega.
               </p>
             </>
           )}

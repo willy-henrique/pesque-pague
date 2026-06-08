@@ -1,23 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Fish, Send, CheckCircle2 } from "lucide-react";
+import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
+import { useDocument } from "@/hooks/useFirestore";
 import { serializeCartItems } from "@/lib/pedidos";
 import { useCart } from "@/store/cart";
 import { apiFetch } from "@/lib/auth-api";
 import { formatCurrency } from "@/lib/utils";
+import type { Pique } from "@/types";
 import toast from "react-hot-toast";
 
 export default function Confirmar() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { modoAtendente } = useModoAtendenteAuth();
   const cart   = useCart();
+  const { data: pique } = useDocument<Pique>("piques", id);
 
   const [obsGeral, setObsGeral]   = useState("");
   const [loading, setLoading]     = useState(false);
   const [mounted, setMounted]     = useState(false);
+
+  const clienteNomeParam = searchParams.get("clienteNome") ?? "";
+  const clienteTelParam = searchParams.get("clienteTelefone") ?? "";
+  const piqueNome = cart.piqueNome ?? pique?.nome ?? (pique?.numero ? `Mesa ${pique.numero}` : "Mesa");
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
@@ -34,16 +44,22 @@ export default function Confirmar() {
     if (cart.items.length === 0) return;
 
     const piqueId = cart.piqueId ?? id;
-    const raw = sessionStorage.getItem(`cliente-${piqueId}`);
-    const cliente = raw ? (JSON.parse(raw) as { nome: string; telefone: string }) : { nome: "", telefone: "" };
+    let cliente: { nome: string; telefone: string };
+
+    if (modoAtendente && clienteNomeParam) {
+      cliente = { nome: clienteNomeParam, telefone: clienteTelParam };
+    } else {
+      const raw = sessionStorage.getItem(`cliente-${piqueId}`);
+      cliente = raw ? (JSON.parse(raw) as { nome: string; telefone: string }) : { nome: "", telefone: "" };
+    }
 
     setLoading(true);
     try {
-      await apiFetch("/api/pedidos", {
+      const response = await apiFetch("/api/pedidos", {
         method: "POST",
         body: JSON.stringify({
           piqueId,
-          piqueNome:       cart.piqueNome ?? `Mesa ${id}`,
+          piqueNome,
           nomeCliente:     cliente.nome,
           telefoneCliente: cliente.telefone,
           itens:           serializeCartItems(cart.items),
@@ -52,8 +68,19 @@ export default function Confirmar() {
       });
 
       cart.clearCart();
-      toast.success("Pedido enviado! Voltando ao cardápio...");
-      router.replace(`/pique/${id}/cardapio`);
+      toast.success("Pedido enviado ao PDV.");
+      const sucessoBase = `/pique/${id}/enviado?pedido=${encodeURIComponent(response.id)}`;
+      if (modoAtendente) {
+        const params = new URLSearchParams({
+          modo: "atendente",
+          pedido: response.id,
+        });
+        if (clienteNomeParam) params.set("clienteNome", clienteNomeParam);
+        if (clienteTelParam) params.set("clienteTelefone", clienteTelParam);
+        router.replace(`/pique/${id}/enviado?${params.toString()}`);
+      } else {
+        router.replace(sucessoBase);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao enviar pedido. Tente novamente.");
       setLoading(false);
@@ -88,7 +115,7 @@ export default function Confirmar() {
           </div>
           <div>
             <p className="text-forest-400 text-xs">Entrega no</p>
-            <p className="font-semibold text-forest-900">{cart.piqueNome ?? `Mesa ${id}`}</p>
+            <p className="font-semibold text-forest-900">{piqueNome}</p>
           </div>
           <CheckCircle2 className="w-5 h-5 text-forest-400 ml-auto" />
         </motion.div>
@@ -144,7 +171,7 @@ export default function Confirmar() {
           />
         </motion.div>
 
-        {/* Aviso pagamento */}
+        {/* Aviso de envio */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -152,9 +179,9 @@ export default function Confirmar() {
           className="glass rounded-2xl px-4 py-3 border border-gold-500/10"
         >
           <p className="text-forest-300 text-sm text-center leading-relaxed">
-            O pagamento de{" "}
+            Total do pedido:{" "}
             <span className="gradient-gold-text font-bold">{formatCurrency(cart.total())}</span>
-            {" "}será realizado no caixa ao encerrar o consumo.
+            {" "}• ao confirmar, ele segue direto para o PDV.
           </p>
         </motion.div>
       </div>

@@ -276,7 +276,7 @@ export default function ComandaDoDia() {
           </motion.div>
         )}
 
-        {/* Aviso pagamento */}
+        {/* Aviso de andamento */}
         {todosEntregues && (
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
@@ -287,7 +287,8 @@ export default function ComandaDoDia() {
             <Wallet className="w-7 h-7 text-gold-500 mx-auto mb-2" />
             <p className="text-forest-900 font-semibold">Tudo entregue!</p>
             <p className="text-forest-400 text-sm mt-0.5">
-              Dirija-se ao caixa para pagar{" "}
+              Seu consumo foi consolidado no atendimento.
+              {" "}Total atual:{" "}
               <span className="gradient-gold-text font-bold">{formatCurrency(totalGeral)}</span>
             </p>
           </motion.div>
@@ -312,7 +313,7 @@ export default function ComandaDoDia() {
               <p className="text-forest-500 text-sm mt-1">
                 {modoAtendente
                   ? "Lance um pedido ou volte para escolher outra mesa."
-                  : "Não há pedidos aguardando pagamento."}
+                  : "Não há pedidos em aberto nesta comanda."}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">

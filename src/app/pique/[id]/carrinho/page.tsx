@@ -11,7 +11,9 @@ import { serializeCartItems } from "@/lib/pedidos";
 import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { withModoAtendente } from "@/lib/atendente";
 import { apiFetch } from "@/lib/auth-api";
+import { useDocument } from "@/hooks/useFirestore";
 import { formatCurrency } from "@/lib/utils";
+import type { Pique } from "@/types";
 
 export default function Carrinho() {
   const { id } = useParams<{ id: string }>();
@@ -19,10 +21,12 @@ export default function Carrinho() {
   const searchParams = useSearchParams();
   const { modoAtendente } = useModoAtendenteAuth();
   const cart    = useCart();
+  const { data: pique } = useDocument<Pique>("piques", id);
 
   // Em modo atendente, a identificação vem dos query params (lançado manualmente)
   const clienteNomeParam = searchParams.get("clienteNome") ?? "";
   const clienteTelParam  = searchParams.get("clienteTelefone") ?? "";
+  const piqueNome = cart.piqueNome ?? pique?.nome ?? (pique?.numero ? `Mesa ${pique.numero}` : "Mesa");
 
   const cardapioHref = withModoAtendente(`/pique/${id}/cardapio`);
   const comandaHref = withModoAtendente(`/pique/${id}/comanda`);
@@ -52,11 +56,11 @@ export default function Carrinho() {
 
     setEnviando(true);
     try {
-      await apiFetch("/api/pedidos", {
+      const response = await apiFetch("/api/pedidos", {
         method: "POST",
         body: JSON.stringify({
           piqueId,
-          piqueNome: cart.piqueNome ?? `Mesa ${id}`,
+          piqueNome,
           nomeCliente: cliente.nome,
           telefoneCliente: cliente.telefone,
           itens: serializeCartItems(cart.items),
@@ -65,8 +69,18 @@ export default function Carrinho() {
       });
 
       cart.clearCart();
-      toast.success("Pedido enviado para a cozinha!");
-      router.replace(modoAtendente ? comandaHref : cardapioHref);
+      toast.success("Pedido enviado ao PDV.");
+      if (modoAtendente) {
+        const params = new URLSearchParams({
+          modo: "atendente",
+          pedido: response.id,
+        });
+        if (clienteNomeParam) params.set("clienteNome", clienteNomeParam);
+        if (clienteTelParam) params.set("clienteTelefone", clienteTelParam);
+        router.replace(`/pique/${id}/enviado?${params.toString()}`);
+      } else {
+        router.replace(`/pique/${id}/enviado?pedido=${encodeURIComponent(response.id)}`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao enviar pedido. Tente novamente.");
       setEnviando(false);
@@ -259,7 +273,7 @@ export default function Carrinho() {
               />
             </div>
             <p className="text-forest-9000 text-xs text-center">
-              Pagamento realizado no caixa ao encerrar o consumo.
+              Ao enviar, o pedido segue direto para o PDV.
             </p>
             <button
               onClick={handleEnviarPedido}
