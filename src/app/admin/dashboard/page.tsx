@@ -5,13 +5,14 @@ import { playNotification } from "@/lib/sound";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, Flame, Bike, CheckCircle2, ChevronRight, MapPin,
-  TrendingUp, ShoppingBag, Wallet, Package,
+  TrendingUp, ShoppingBag, Wallet,
 } from "lucide-react";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
+import { pedidoTemSetor } from "@/lib/pedido-status";
 import { formatCurrency, getRelativeTime, isSameBrasiliaDay } from "@/lib/utils";
-import type { Pedido, OrderStatus } from "@/types";
+import type { Pedido, OrderStatus, SetorOrderStatus } from "@/types";
 import { STATUS_LABELS, STATUS_NEXT } from "@/types";
 import toast from "react-hot-toast";
 
@@ -74,17 +75,31 @@ export default function Dashboard() {
     prevCountRef.current = novos;
   }, [novos]);
 
-  const hoje       = pedidos.filter((p) => p.criadoEm && isSameBrasiliaDay(p.criadoEm.toDate()));
-  const totalHoje  = hoje.reduce((s, p) => s + p.total, 0);
+  // Stats include ALL today's orders (including paid), excluding only cancelled
+  const hoje = todosPedidos.filter(
+    (p) => p.criadoEm && isSameBrasiliaDay(p.criadoEm.toDate()) && p.status !== "cancelado"
+  );
+  const totalHoje   = hoje.reduce((s, p) => s + p.total, 0);
   const pedidosHoje = hoje.length;
+
+  const SETOR_STATUS_FOR: Partial<Record<OrderStatus, SetorOrderStatus>> = {
+    em_preparo: "em_preparo",
+    saiu: "pronto",
+    entregue: "entregue",
+  };
 
   const avancarStatus = async (pedido: Pedido) => {
     const proximo = STATUS_NEXT[pedido.status];
     if (!proximo) return;
-    await updateDoc(doc(db, "pedidos", pedido.id), {
-      status: proximo,
-      atualizadoEm: serverTimestamp(),
-    });
+
+    const novoSetorStatus = SETOR_STATUS_FOR[proximo];
+    const update: Record<string, unknown> = { status: proximo, atualizadoEm: serverTimestamp() };
+    if (novoSetorStatus) {
+      if (pedidoTemSetor(pedido, "cozinha")) update.cozinhaStatus = novoSetorStatus;
+      if (pedidoTemSetor(pedido, "bar"))     update.barStatus     = novoSetorStatus;
+    }
+
+    await updateDoc(doc(db, "pedidos", pedido.id), update);
     toast.success(`Pedido #${pedido.id.slice(-4).toUpperCase()} → ${STATUS_LABELS[proximo]}`);
   };
 
