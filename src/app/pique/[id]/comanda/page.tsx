@@ -594,40 +594,73 @@ export default function ComandaDoDia() {
         <div className="sticky bottom-0 p-4 max-w-xl mx-auto w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
           {modoAtendente ? (
             <div className="glass rounded-2xl p-2 space-y-2 border border-forest-200">
+              {/* Total + clientes */}
               <div className="flex items-center justify-between px-2 pt-1">
                 <span className="text-forest-500 text-xs">Total a receber</span>
                 <span className="font-bold text-lg text-gold-700">{formatCurrency(totalGeral)}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/atendente")}
-                  className="btn-ghost py-3 rounded-xl text-sm border border-forest-200"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Voltar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmarPagamento}
-                  disabled={confirmandoPagamento}
-                  className="btn-gold py-3 rounded-xl text-sm disabled:opacity-60"
-                >
-                  <Banknote className="w-4 h-4" />
-                  {confirmandoPagamento ? "..." : "Confirmar pagamento"}
-                </button>
-              </div>
+
+              {/* Subtotais por cliente quando há múltiplos */}
               {clientesDaComanda.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setModalPagarSeparado(true)}
-                  disabled={confirmandoPagamento}
-                  className="btn-ghost w-full py-3 rounded-xl text-sm border border-forest-200 disabled:opacity-60"
-                >
-                  <Users className="w-4 h-4" />
-                  Pagar separado por cliente
-                </button>
+                <div className="px-2 pb-1 space-y-1">
+                  {clientesDaComanda.map((cliente) => (
+                    <div key={cliente} className="flex items-center justify-between text-xs">
+                      <span className="text-forest-500 flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {cliente}
+                      </span>
+                      <span className="font-semibold text-forest-700">
+                        {formatCurrency(totaisPorCliente.get(cliente) ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
+
+              {/* Botões de pagamento */}
+              {clientesDaComanda.length > 1 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={confirmarPagamento}
+                    disabled={confirmandoPagamento}
+                    className="btn-gold py-3 rounded-xl text-sm disabled:opacity-60"
+                  >
+                    <Banknote className="w-4 h-4" />
+                    {confirmandoPagamento ? "..." : "Cobrar tudo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalPagarSeparado(true)}
+                    disabled={confirmandoPagamento}
+                    className="py-3 rounded-xl text-sm font-semibold border-2 border-water-400/60 bg-water-500/10 text-water-600 hover:bg-water-500/20 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Separar conta
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/atendente")}
+                    className="btn-ghost py-3 rounded-xl text-sm border border-forest-200"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmarPagamento}
+                    disabled={confirmandoPagamento}
+                    className="btn-gold py-3 rounded-xl text-sm disabled:opacity-60"
+                  >
+                    <Banknote className="w-4 h-4" />
+                    {confirmandoPagamento ? "..." : "Confirmar pagamento"}
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={deixarPagamentoNoPdv}
@@ -637,10 +670,20 @@ export default function ComandaDoDia() {
                 <Store className="w-4 h-4" />
                 Deixar pagamento para o PDV
               </button>
+              {clientesDaComanda.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/atendente")}
+                  className="w-full py-2 rounded-xl text-sm text-forest-500 hover:text-forest-900 transition-colors flex items-center justify-center gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Voltar
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => router.push(podeAdicionarPedidoAtendente ? cardapioHref : "/atendente")}
-                className="w-full py-2.5 rounded-xl text-sm text-forest-600 hover:text-forest-900 transition-colors"
+                className="w-full py-2 rounded-xl text-sm text-forest-500 hover:text-forest-900 transition-colors"
               >
                 <Plus className="w-4 h-4 inline mr-1" />
                 {modoAtendente && !podeAdicionarPedidoAtendente ? "Identificar cliente para novo pedido" : "Adicionar itens"}
