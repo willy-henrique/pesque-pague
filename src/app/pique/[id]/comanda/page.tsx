@@ -499,7 +499,7 @@ export default function ComandaDoDia() {
                               cancelarPedido(pedido);
                             }}
                             disabled={cancelandoId === pedido.id}
-                            className="btn-ghost px-2.5 py-2 rounded-lg text-xs text-red-500 border border-red-500/20 disabled:opacity-60"
+                            className="btn-ghost px-1.5 py-1 rounded-md text-[10px] text-red-400 border border-red-400/20 disabled:opacity-60"
                             title="Cancelar pedido (até 4 minutos)"
                           >
                             {cancelandoId === pedido.id ? "..." : "Cancelar"}
