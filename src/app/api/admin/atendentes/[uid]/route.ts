@@ -60,3 +60,30 @@ export async function PATCH(
     return Response.json({ error: "Falha ao atualizar atendente." }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ uid: string }> }
+) {
+  try {
+    await verifyAdminRequest(request);
+    const { uid } = await context.params;
+
+    const db   = getAdminDb();
+    const auth = getAdminAuth();
+
+    const snap = await db.collection("usuarios").doc(uid).get();
+    if (!snap.exists || snap.data()?.role !== "atendente") {
+      return Response.json({ error: "Atendente não encontrado." }, { status: 404 });
+    }
+
+    await auth.deleteUser(uid);
+    await db.collection("usuarios").doc(uid).delete();
+
+    return Response.json({ ok: true, message: "Atendente removido." });
+  } catch (err) {
+    if (err instanceof Response) return err;
+    console.error("[DELETE /api/admin/atendentes/[uid]]", err);
+    return Response.json({ error: "Falha ao remover atendente." }, { status: 500 });
+  }
+}

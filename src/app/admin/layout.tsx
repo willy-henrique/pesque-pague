@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, LayoutDashboard, Package, Tags, MapPin, BarChart2,
   LogOut, Menu, X, Tag, Banknote, Settings,
-  ChefHat, Moon, Sun, UserRound, GlassWater,
+  ChefHat, Moon, Sun, UserRound, GlassWater, Users,
 } from "lucide-react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/admin/promocoes",     label: "Promoções",     icon: Tag },
   { href: "/admin/relatorios",    label: "Relatórios",    icon: BarChart2 },
   { href: "/admin/atendentes",    label: "Atendentes",    icon: UserRound },
+  { href: "/admin/usuarios",      label: "Usuários",      icon: Users },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 
