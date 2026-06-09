@@ -12,8 +12,8 @@ import toast from "react-hot-toast";
 
 const ICONES = ["🎣", "🍖", "🥤", "🍺", "🍟", "🎿", "🪣", "🐟", "🦐", "🪱", "🧃", "🍕", "🍔", "🌭", "🍦", "☕", "🧊", "🔧"];
 
-interface FormState { nome: string; icone: string; ordem: string; ativo: boolean }
-const EMPTY: FormState = { nome: "", icone: "🎣", ordem: "0", ativo: true };
+interface FormState { nome: string; icone: string; ordem: string; ativo: boolean; setor: "cozinha" | "bar" }
+const EMPTY: FormState = { nome: "", icone: "🎣", ordem: "0", ativo: true, setor: "cozinha" };
 
 export default function Categorias() {
   const { data: categorias } = useCollection<Categoria>("categorias", [orderBy("ordem", "asc")]);
@@ -25,7 +25,7 @@ export default function Categorias() {
 
   const openAdd = () => { setForm(EMPTY); setEditando(null); setModal(true); };
   const openEdit = (c: Categoria) => {
-    setForm({ nome: c.nome, icone: c.icone, ordem: String(c.ordem), ativo: c.ativo });
+    setForm({ nome: c.nome, icone: c.icone, ordem: String(c.ordem), ativo: c.ativo, setor: c.setor ?? "cozinha" });
     setEditando(c);
     setModal(true);
   };
@@ -33,7 +33,7 @@ export default function Categorias() {
   const handleSave = async () => {
     if (!form.nome.trim()) return toast.error("Informe o nome.");
     setSaving(true);
-    const payload = { nome: form.nome.trim(), icone: form.icone, ordem: parseInt(form.ordem) || 0, ativo: form.ativo };
+    const payload = { nome: form.nome.trim(), icone: form.icone, ordem: parseInt(form.ordem) || 0, ativo: form.ativo, setor: form.setor };
     try {
       if (editando) {
         await updateDoc(doc(db, "categorias", editando.id), payload);
@@ -97,7 +97,16 @@ export default function Categorias() {
                   <p className={`font-semibold text-sm ${cat.ativo ? "text-forest-900" : "text-forest-600 line-through"}`}>
                     {cat.nome}
                   </p>
-                  <p className="text-forest-600 text-xs">Ordem: {cat.ordem}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-forest-600 text-xs">Ordem: {cat.ordem}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${
+                      (cat.setor ?? "cozinha") === "bar"
+                        ? "bg-blue-500/15 text-blue-300"
+                        : "bg-orange-500/15 text-orange-300"
+                    }`}>
+                      {(cat.setor ?? "cozinha") === "bar" ? "🍺 Bar" : "🍳 Cozinha"}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => openEdit(cat)} className="btn-ghost p-2 rounded-lg">
@@ -157,6 +166,34 @@ export default function Categorias() {
                         {ic}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-forest-400 text-xs font-medium">Destino dos itens *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, setor: "cozinha" })}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        form.setor === "cozinha"
+                          ? "border-orange-500/60 bg-orange-500/15 text-orange-300"
+                          : "border-white/10 text-forest-500 hover:bg-forest-800"
+                      }`}
+                    >
+                      🍳 Cozinha
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, setor: "bar" })}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        form.setor === "bar"
+                          ? "border-blue-500/60 bg-blue-500/15 text-blue-300"
+                          : "border-white/10 text-forest-500 hover:bg-forest-800"
+                      }`}
+                    >
+                      🍺 Bar
+                    </button>
                   </div>
                 </div>
 

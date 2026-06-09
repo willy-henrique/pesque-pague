@@ -8,6 +8,7 @@ interface CreateAtendenteBody {
   nome?: string;
   email?: string;
   senha?: string;
+  setores?: string[];
 }
 
 export async function POST(request: Request) {
@@ -18,6 +19,9 @@ export async function POST(request: Request) {
     const nome = body.nome?.trim();
     const email = body.email?.trim().toLowerCase();
     const senha = body.senha ?? "";
+    const setores = Array.isArray(body.setores) && body.setores.length > 0
+      ? body.setores.filter((s) => s === "cozinha" || s === "bar")
+      : ["cozinha", "bar"];
 
     if (!nome) {
       return Response.json({ error: "Informe o nome do atendente." }, { status: 400 });
@@ -46,6 +50,7 @@ export async function POST(request: Request) {
       email,
       role: "atendente",
       ativo: true,
+      setores,
       criadoEm: FieldValue.serverTimestamp(),
     });
 

@@ -56,9 +56,19 @@ export default function AtendentePage() {
   const mesasDisponiveis = piques.filter(
     (p) => p.ativo && (p.status ?? "livre") !== "bloqueado"
   );
+  const setoresAtendente = usuario?.setores ?? ["cozinha", "bar"];
+
   const prontos = pedidos.filter((pedido) => {
-    if (isPedidoProntoParaRetirada(pedido)) return true;
-    return getStatusGeralPedido(pedido) === "saiu";
+    const isReady = isPedidoProntoParaRetirada(pedido) || getStatusGeralPedido(pedido) === "saiu";
+    if (!isReady) return false;
+
+    // Status "saiu" = todos setores prontos/entregues, todos os atendentes precisam saber
+    if (getStatusGeralPedido(pedido) === "saiu") return true;
+
+    // Filtra pelo setor do atendente: só aparece se o setor dele está pronto
+    return setoresAtendente.some((setor) =>
+      setor === "bar" ? pedido.barStatus === "pronto" : pedido.cozinhaStatus === "pronto"
+    );
   });
   const clientesPorMesa = useMemo(() => {
     const mapa = new Map<string, string[]>();
@@ -91,7 +101,16 @@ export default function AtendentePage() {
               <p className="text-forest-400 text-xs uppercase tracking-widest">Aplicativo Web</p>
               <h1 className="font-display text-2xl font-bold gradient-gold-text">Atendente</h1>
               {usuario && (
-                <p className="text-forest-500 text-xs truncate mt-0.5">{usuario.nome}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <p className="text-forest-500 text-xs truncate">{usuario.nome}</p>
+                  {setoresAtendente.map((s) => (
+                    <span key={s} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
+                      s === "bar" ? "bg-blue-500/20 text-blue-300" : "bg-orange-500/20 text-orange-300"
+                    }`}>
+                      {s === "bar" ? "🍺 Bar" : "🍳 Cozinha"}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
             <button

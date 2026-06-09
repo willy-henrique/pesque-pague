@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, UserRound, Mail, Lock, X, ShieldOff, ShieldCheck, KeyRound,
+  Plus, UserRound, Mail, Lock, X, ShieldOff, ShieldCheck, KeyRound, Building2,
 } from "lucide-react";
 import { useCollection, where } from "@/hooks/useFirestore";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { adminFetch } from "@/lib/auth-api";
 import { ROLE_LABELS } from "@/lib/usuarios";
-import type { Usuario } from "@/types";
+import type { SetorPedido, Usuario } from "@/types";
 import toast from "react-hot-toast";
 
 interface FormState {
@@ -17,6 +17,7 @@ interface FormState {
   email: string;
   senha: string;
   confirmarSenha: string;
+  setores: SetorPedido[];
 }
 
 const EMPTY: FormState = {
@@ -24,6 +25,7 @@ const EMPTY: FormState = {
   email: "",
   senha: "",
   confirmarSenha: "",
+  setores: ["cozinha", "bar"],
 };
 
 export default function AtendentesAdmin() {
@@ -38,6 +40,31 @@ export default function AtendentesAdmin() {
   const [saving, setSaving] = useState(false);
   const [resetUid, setResetUid] = useState<string | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
+  const [editSetorUid, setEditSetorUid] = useState<string | null>(null);
+  const [editSetores, setEditSetores] = useState<SetorPedido[]>(["cozinha", "bar"]);
+
+  const toggleSetor = (setor: SetorPedido, current: SetorPedido[], set: (s: SetorPedido[]) => void) => {
+    const has = current.includes(setor);
+    if (has && current.length === 1) return;
+    set(has ? current.filter((s) => s !== setor) : [...current, setor]);
+  };
+
+  const salvarSetores = async () => {
+    if (!editSetorUid) return;
+    setSaving(true);
+    try {
+      await adminFetch(`/api/admin/atendentes/${editSetorUid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ setores: editSetores }),
+      });
+      toast.success("Setor atualizado.");
+      setEditSetorUid(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!form.nome.trim()) return toast.error("Informe o nome.");
@@ -53,6 +80,7 @@ export default function AtendentesAdmin() {
           nome: form.nome.trim(),
           email: form.email.trim(),
           senha: form.senha,
+          setores: form.setores,
         }),
       });
       toast.success("Atendente cadastrado!");
@@ -150,7 +178,15 @@ export default function AtendentesAdmin() {
                     <Mail className="w-3 h-3 shrink-0" />
                     {u.email}
                   </p>
-                  <p className="text-[10px] text-forest-400 mt-0.5">{ROLE_LABELS[u.role]}</p>
+                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                    {(u.setores ?? ["cozinha", "bar"]).map((s) => (
+                      <span key={s} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
+                        s === "bar" ? "bg-blue-500/15 text-blue-400" : "bg-orange-500/15 text-orange-400"
+                      }`}>
+                        {s === "bar" ? "🍺 Bar" : "🍳 Cozinha"}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <span
                   className={`badge text-[10px] shrink-0 ${
@@ -160,6 +196,14 @@ export default function AtendentesAdmin() {
                   {u.ativo ? "Ativo" : "Bloqueado"}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setEditSetorUid(u.id); setEditSetores(u.setores ?? ["cozinha", "bar"]); }}
+                    className="btn-ghost p-2 rounded-lg"
+                    title="Editar setor"
+                  >
+                    <Building2 className="w-4 h-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setResetUid(u.id); setNovaSenha(""); }}
@@ -248,6 +292,26 @@ export default function AtendentesAdmin() {
                     className="input-field"
                   />
                 </Field>
+                <Field label="Setor de atuação" icon={Building2}>
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    {(["cozinha", "bar"] as SetorPedido[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleSetor(s, form.setores, (next) => setForm({ ...form, setores: next }))}
+                        className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                          form.setores.includes(s)
+                            ? s === "bar"
+                              ? "border-blue-500/60 bg-blue-500/15 text-blue-300"
+                              : "border-orange-500/60 bg-orange-500/15 text-orange-300"
+                            : "border-white/10 text-forest-500 hover:bg-forest-800"
+                        }`}
+                      >
+                        {s === "bar" ? "🍺 Bar" : "🍳 Cozinha"}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
               </div>
               <button
                 type="button"
@@ -291,6 +355,57 @@ export default function AtendentesAdmin() {
                 <button
                   type="button"
                   onClick={salvarNovaSenha}
+                  disabled={saving}
+                  className="btn-gold flex-1 py-2.5 rounded-xl disabled:opacity-60"
+                >
+                  Salvar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editSetorUid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setEditSetorUid(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="glass rounded-2xl w-full max-w-xs p-6 space-y-4 border border-forest-200 dark:border-forest-700"
+            >
+              <h2 className="font-bold text-forest-900 dark:text-forest-50">Setor de atuação</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {(["cozinha", "bar"] as SetorPedido[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleSetor(s, editSetores, setEditSetores)}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      editSetores.includes(s)
+                        ? s === "bar"
+                          ? "border-blue-500/60 bg-blue-500/15 text-blue-300"
+                          : "border-orange-500/60 bg-orange-500/15 text-orange-300"
+                        : "border-white/10 text-forest-500 hover:bg-forest-800"
+                    }`}
+                  >
+                    {s === "bar" ? "🍺 Bar" : "🍳 Cozinha"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditSetorUid(null)} className="btn-ghost flex-1 py-2.5 rounded-xl">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={salvarSetores}
                   disabled={saving}
                   className="btn-gold flex-1 py-2.5 rounded-xl disabled:opacity-60"
                 >

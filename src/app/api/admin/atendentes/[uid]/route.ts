@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 interface PatchAtendenteBody {
   ativo?: boolean;
   senha?: string;
+  setores?: string[];
 }
 
 export async function PATCH(
@@ -38,6 +39,11 @@ export async function PATCH(
         return Response.json({ error: "A senha deve ter no mínimo 6 caracteres." }, { status: 400 });
       }
       await auth.updateUser(uid, { password: body.senha });
+    }
+
+    if (Array.isArray(body.setores)) {
+      const setores = body.setores.filter((s) => s === "cozinha" || s === "bar");
+      if (setores.length > 0) updates.setores = setores;
     }
 
     if (Object.keys(updates).length > 0) {

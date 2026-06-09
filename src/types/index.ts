@@ -17,6 +17,7 @@ export interface Categoria {
   icone: string;
   ordem: number;
   ativo: boolean;
+  setor: SetorPedido;
 }
 
 export interface Adicional {
@@ -115,6 +116,7 @@ export interface Usuario {
   email: string;
   role: UserRole;
   ativo: boolean;
+  setores?: SetorPedido[];
   criadoEm: Timestamp;
 }
 

@@ -64,7 +64,9 @@ export default function Produtos() {
   };
 
   const openEdit = (produto: Produto) => {
-    setForm({ ...produto, preco: String(produto.preco), estoque: String(produto.estoque), fotoFile: null, tipo: produto.tipo ?? "comida", adicionais: produto.adicionais ?? [] });
+    const cat = cats.find((c) => c.id === produto.categoriaId);
+    const tipo = cat?.setor ? (cat.setor === "bar" ? "bebida" : "comida") : (produto.tipo ?? "comida");
+    setForm({ ...produto, preco: String(produto.preco), estoque: String(produto.estoque), fotoFile: null, tipo, adicionais: produto.adicionais ?? [] });
     setEditando(produto);
     setModal("edit");
   };
@@ -251,16 +253,23 @@ export default function Produtos() {
                   </FormField>
                 </div>
                 <FormField label="Categoria">
-                  <select value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })} className="input-field">
+                  <select
+                    value={form.categoriaId}
+                    onChange={(e) => {
+                      const cat = cats.find((c) => c.id === e.target.value);
+                      const tipo = cat ? (cat.setor === "bar" ? "bebida" : "comida") : form.tipo;
+                      setForm({ ...form, categoriaId: e.target.value, tipo });
+                    }}
+                    className="input-field"
+                  >
                     <option value="">Sem categoria</option>
                     {cats.map((c) => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
                   </select>
-                </FormField>
-                <FormField label="Tipo">
-                  <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as "comida" | "bebida" })} className="input-field">
-                    <option value="comida">🍽️ Comida (cozinha)</option>
-                    <option value="bebida">🥤 Bebida (bar)</option>
-                  </select>
+                  {form.categoriaId && (
+                    <p className={`text-xs mt-1 ${form.tipo === "bebida" ? "text-blue-400" : "text-orange-400"}`}>
+                      {form.tipo === "bebida" ? "🍺 Vai para o Bar" : "🍳 Vai para a Cozinha"}
+                    </p>
+                  )}
                 </FormField>
                 <FormField label="Adicionais opcionais (cobrados à parte)">
                   <div className="space-y-2">
