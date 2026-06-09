@@ -62,7 +62,7 @@ export default function RootPage() {
             <UserRound className="w-5 h-5" />
             Atendente
           </Link>
-          <Link href="/admin/login" className="btn-ghost w-full py-4 rounded-2xl text-base">
+          <Link href="/novo/login" className="btn-ghost w-full py-4 rounded-2xl text-base">
             <MonitorCog className="w-5 h-5" />
             ERP
           </Link>

@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { useCollection, orderBy } from "@/hooks/useFirestore";
 import { buildPedidoStatusAfterSetorUpdate, getStatusDoSetor } from "@/lib/pedido-status";
 import type { Pedido, SetorOrderStatus, SetorPedido } from "@/types";
-import { PedidoCard } from "@/app/admin/cozinha/page";
+import { PedidoCard } from "@/app/novo/cozinha/page";
 import toast from "react-hot-toast";
 
 export default function Bar() {

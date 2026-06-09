@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import {
   signInWithEmailAndPassword, signOut, onAuthStateChanged, type User,
+  browserLocalPersistence, setPersistence,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -124,11 +125,6 @@ export default function WillyDevPage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u && u.email === DEV_EMAIL) {
         setUser(u);
-        // Log login
-        void devApi(u, "/api/dev/logs", {
-          method: "POST",
-          body: JSON.stringify({ tipo: "dev_login", mensagem: "Login no painel de desenvolvedor.", ator: DEV_EMAIL }),
-        });
       } else {
         if (u) await signOut(auth); // wrong account
         setUser(null);
@@ -212,8 +208,15 @@ export default function WillyDevPage() {
     }
     setLogging(true);
     try {
-      await signInWithEmailAndPassword(auth, emailInput, senhaInput);
-      // onAuthStateChanged handles the rest
+      await setPersistence(auth, browserLocalPersistence);
+      const cred = await signInWithEmailAndPassword(auth, emailInput, senhaInput);
+      // Write login log after successful auth
+      const idToken = await cred.user.getIdToken();
+      void fetch("/api/dev/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ tipo: "dev_login", mensagem: "Login no painel de desenvolvedor.", ator: DEV_EMAIL }),
+      });
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (code === "auth/user-not-found" || code === "auth/invalid-credential") {

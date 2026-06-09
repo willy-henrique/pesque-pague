@@ -34,7 +34,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, senha);
-      router.push("/admin/dashboard");
+      router.push("/novo/dashboard");
     } catch {
       toast.error("E-mail ou senha incorretos.");
       setLoading(false);
