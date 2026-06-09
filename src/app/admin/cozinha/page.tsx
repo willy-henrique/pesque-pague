@@ -20,9 +20,13 @@ export default function Cozinha() {
 
   const { data: todos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "asc")]);
 
-  const pendentes = todos.filter((p) => getStatusDoSetor(p, setor) === "novo");
-  const preparo = todos.filter((p) => getStatusDoSetor(p, setor) === "em_preparo");
-  const prontos = todos.filter((p) => getStatusDoSetor(p, setor) === "pronto");
+  const ativos = todos.filter(
+    (p) => p.status !== "pago" && p.status !== "cancelado" && p.status !== "entregue"
+  );
+
+  const pendentes = ativos.filter((p) => getStatusDoSetor(p, setor) === "novo");
+  const preparo = ativos.filter((p) => getStatusDoSetor(p, setor) === "em_preparo");
+  const prontos = ativos.filter((p) => getStatusDoSetor(p, setor) === "pronto");
 
   useEffect(() => {
     const novos = pendentes.length;
