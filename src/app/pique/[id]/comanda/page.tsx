@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet, XCircle,
-  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote, Store,
+  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote, Store, UserRound, X, Users,
 } from "lucide-react";
 import {
   collection, query, where, onSnapshot,
@@ -52,6 +52,7 @@ export default function ComandaDoDia() {
   const [abertos, setAbertos]       = useState<Set<string>>(new Set());
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [confirmandoPagamento, setConfirmandoPagamento] = useState(false);
+  const [modalPagarSeparado, setModalPagarSeparado] = useState(false);
 
   // Carrega nome da mesa
   useEffect(() => {
@@ -112,6 +113,15 @@ export default function ComandaDoDia() {
         .filter((nome): nome is string => Boolean(nome))
     )
   );
+
+  const totaisPorCliente = useMemo(() => {
+    const mapa = new Map<string, number>();
+    for (const pedido of pedidos) {
+      const nome = pedido.nomeCliente?.trim() || "Sem identificação";
+      mapa.set(nome, (mapa.get(nome) ?? 0) + pedido.total);
+    }
+    return mapa;
+  }, [pedidos]);
 
   const toggleAberto = (pedidoId: string) => {
     setAbertos((prev) => {
@@ -206,6 +216,39 @@ export default function ComandaDoDia() {
       onConfirm: async () => {
         toast.success("Comanda mantida em aberto para pagamento no PDV.");
         router.push("/atendente");
+      },
+    });
+  };
+
+  const confirmarPagamentoPorCliente = (cliente: string) => {
+    const pedidosCliente = pedidos.filter((p) => (p.nomeCliente?.trim() || "Sem identificação") === cliente);
+    const totalCliente = pedidosCliente.reduce((s, p) => s + p.total, 0);
+    const pedidosRestantes = pedidos.filter((p) => (p.nomeCliente?.trim() || "Sem identificação") !== cliente);
+
+    confirm({
+      title: `Pagar de ${cliente}?`,
+      description: `Confirmar ${formatCurrency(totalCliente)} para ${cliente}?${pedidosRestantes.length === 0 ? " A mesa será liberada." : " Os demais clientes continuam em aberto."}`,
+      confirmLabel: "Confirmar pagamento",
+      variant: "default",
+      onConfirm: async () => {
+        setConfirmandoPagamento(true);
+        try {
+          await Promise.all([
+            ...pedidosCliente.map((p) =>
+              updateDoc(doc(db, "pedidos", p.id), { status: "pago", atualizadoEm: serverTimestamp() })
+            ),
+            ...(pedidosRestantes.length === 0
+              ? [updateDoc(doc(db, "piques", id), { status: "livre" })]
+              : []),
+          ]);
+          toast.success(`Pagamento de ${cliente} confirmado.`);
+          setModalPagarSeparado(false);
+          if (pedidosRestantes.length === 0) router.push("/atendente");
+        } catch {
+          toast.error("Não foi possível confirmar o pagamento.");
+        } finally {
+          setConfirmandoPagamento(false);
+        }
       },
     });
   };
@@ -574,6 +617,17 @@ export default function ComandaDoDia() {
                   {confirmandoPagamento ? "..." : "Confirmar pagamento"}
                 </button>
               </div>
+              {clientesDaComanda.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setModalPagarSeparado(true)}
+                  disabled={confirmandoPagamento}
+                  className="btn-ghost w-full py-3 rounded-xl text-sm border border-forest-200 disabled:opacity-60"
+                >
+                  <Users className="w-4 h-4" />
+                  Pagar separado por cliente
+                </button>
+              )}
               <button
                 type="button"
                 onClick={deixarPagamentoNoPdv}
@@ -609,6 +663,72 @@ export default function ComandaDoDia() {
           )}
         </div>
       )}
+
+      <AnimatePresence>
+        {modalPagarSeparado && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setModalPagarSeparado(false)}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="glass rounded-3xl w-full max-w-sm p-6 space-y-4 border border-forest-200"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-bold text-forest-900 text-lg">Pagar separado</h2>
+                  <p className="text-forest-500 text-xs mt-0.5">{piqueNome}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalPagarSeparado(false)}
+                  className="btn-ghost p-2 rounded-xl"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {clientesDaComanda.map((cliente) => {
+                  const total = totaisPorCliente.get(cliente) ?? 0;
+                  return (
+                    <div
+                      key={cliente}
+                      className="flex items-center gap-3 px-4 py-3 glass rounded-xl border border-forest-200/40"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-forest-700 flex items-center justify-center shrink-0">
+                        <UserRound className="w-4 h-4 text-gold-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-forest-900 text-sm truncate">{cliente}</p>
+                        <p className="text-gold-600 font-bold text-xs">{formatCurrency(total)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => confirmarPagamentoPorCliente(cliente)}
+                        disabled={confirmandoPagamento}
+                        className="btn-gold px-3 py-2 rounded-xl text-xs shrink-0 disabled:opacity-60 flex items-center gap-1.5"
+                      >
+                        <Banknote className="w-3.5 h-3.5" />
+                        Pagar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-forest-500 text-xs text-center">
+                Ao pagar individualmente, só os pedidos daquele cliente são fechados.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {ConfirmDialog}
     </main>

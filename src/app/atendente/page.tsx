@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X, BellRing, ChefHat, GlassWater } from "lucide-react";
+import { ClipboardPlus, Fish, LogOut, Receipt, UserRound, Phone, X, BellRing, ChefHat, GlassWater, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCollection, orderBy, where } from "@/hooks/useFirestore";
@@ -25,6 +25,7 @@ export default function AtendentePage() {
   ]);
 
   const [modalMesa, setModalMesa] = useState<Pique | null>(null);
+  const [modalStep, setModalStep] = useState<"selecionar" | "novo">("novo");
   const [clienteNome, setClienteNome] = useState("");
   const [clienteTel, setClienteTel] = useState("");
 
@@ -35,9 +36,18 @@ export default function AtendentePage() {
   };
 
   const abrirModal = (mesa: Pique) => {
+    const clientes = clientesPorMesa.get(mesa.id) ?? [];
     setClienteNome("");
     setClienteTel("");
+    setModalStep(clientes.length > 0 ? "selecionar" : "novo");
     setModalMesa(mesa);
+  };
+
+  const irAoCardapioComCliente = (nome: string, telefone: string) => {
+    if (!modalMesa) return;
+    const params = new URLSearchParams({ modo: "atendente", clienteNome: nome, clienteTelefone: telefone });
+    router.push(`/pique/${modalMesa.id}/cardapio?${params.toString()}`);
+    setModalMesa(null);
   };
 
   const confirmarEIrAoCardapio = () => {
@@ -71,7 +81,7 @@ export default function AtendentePage() {
     );
   });
   const clientesPorMesa = useMemo(() => {
-    const mapa = new Map<string, string[]>();
+    const mapa = new Map<string, { nome: string; telefone: string }[]>();
 
     for (const pedido of pedidos) {
       if (pedido.status === "pago" || pedido.status === "cancelado") continue;
@@ -79,7 +89,9 @@ export default function AtendentePage() {
       if (!nome) continue;
 
       const atual = mapa.get(pedido.piqueId) ?? [];
-      if (!atual.includes(nome)) atual.push(nome);
+      if (!atual.some((c) => c.nome === nome)) {
+        atual.push({ nome, telefone: pedido.telefoneCliente ?? "" });
+      }
       mapa.set(pedido.piqueId, atual);
     }
 
@@ -222,7 +234,7 @@ export default function AtendentePage() {
                     </p>
                     {clientesMesa.length > 0 && (
                       <p className="text-water-600 text-xs font-medium mt-1 truncate">
-                        Cliente{clientesMesa.length > 1 ? "s" : ""}: {clientesMesa.join(", ")}
+                        Cliente{clientesMesa.length > 1 ? "s" : ""}: {clientesMesa.map((c) => c.nome).join(", ")}
                       </p>
                     )}
                   </div>
@@ -252,7 +264,7 @@ export default function AtendentePage() {
         )}
       </div>
 
-      {/* Modal de identificação manual do cliente */}
+      {/* Modal de novo pedido — selecionar cliente ou adicionar novo */}
       <AnimatePresence>
         {modalMesa && (
           <motion.div
@@ -263,6 +275,7 @@ export default function AtendentePage() {
             onClick={(e) => e.target === e.currentTarget && setModalMesa(null)}
           >
             <motion.div
+              key={modalStep}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -270,7 +283,9 @@ export default function AtendentePage() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-bold text-forest-900 text-lg">Identificar cliente</h2>
+                  <h2 className="font-bold text-forest-900 text-lg">
+                    {modalStep === "selecionar" ? "Quem está pedindo?" : "Identificar cliente"}
+                  </h2>
                   <p className="text-forest-500 text-xs mt-0.5">
                     {modalMesa.nome || `Mesa ${modalMesa.numero}`}
                   </p>
@@ -280,44 +295,88 @@ export default function AtendentePage() {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
-                    <UserRound className="w-3 h-3" /> Nome do cliente *
-                  </label>
-                  <input
-                    value={clienteNome}
-                    onChange={(e) => setClienteNome(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
-                    placeholder="João Silva"
-                    className="input-field"
-                    autoFocus
-                  />
+              {modalStep === "selecionar" ? (
+                <div className="space-y-3">
+                  <p className="text-forest-500 text-xs uppercase tracking-wider font-semibold">Clientes na mesa</p>
+                  <div className="space-y-2">
+                    {(clientesPorMesa.get(modalMesa.id) ?? []).map((cliente) => (
+                      <button
+                        key={cliente.nome}
+                        type="button"
+                        onClick={() => irAoCardapioComCliente(cliente.nome, cliente.telefone)}
+                        className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl border border-forest-200/40 hover:border-gold-500/40 transition-all text-left"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-forest-700 flex items-center justify-center shrink-0">
+                          <UserRound className="w-4 h-4 text-gold-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-forest-900 text-sm truncate">{cliente.nome}</p>
+                          {cliente.telefone && (
+                            <p className="text-forest-500 text-xs">{cliente.telefone}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-forest-500 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalStep("novo")}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-forest-600 hover:border-gold-500 text-forest-500 hover:text-forest-900 transition-colors text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar novo cliente
+                  </button>
                 </div>
-                <div>
-                  <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
-                    <Phone className="w-3 h-3" /> Telefone do cliente *
-                  </label>
-                  <input
-                    value={clienteTel}
-                    onChange={(e) => setClienteTel(formatarTelefone(e.target.value))}
-                    onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
-                    placeholder="(00) 00000-0000"
-                    type="tel"
-                    inputMode="numeric"
-                    className="input-field"
-                  />
+              ) : (
+                <div className="space-y-3">
+                  {(clientesPorMesa.get(modalMesa.id) ?? []).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setModalStep("selecionar")}
+                      className="flex items-center gap-1 text-forest-500 text-xs hover:text-forest-900 transition-colors"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      Voltar para clientes da mesa
+                    </button>
+                  )}
+                  <div>
+                    <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
+                      <UserRound className="w-3 h-3" /> Nome do cliente *
+                    </label>
+                    <input
+                      value={clienteNome}
+                      onChange={(e) => setClienteNome(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
+                      placeholder="João Silva"
+                      className="input-field"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-forest-500 text-xs font-medium flex items-center gap-1 mb-1">
+                      <Phone className="w-3 h-3" /> Telefone do cliente *
+                    </label>
+                    <input
+                      value={clienteTel}
+                      onChange={(e) => setClienteTel(formatarTelefone(e.target.value))}
+                      onKeyDown={(e) => e.key === "Enter" && confirmarEIrAoCardapio()}
+                      placeholder="(00) 00000-0000"
+                      type="tel"
+                      inputMode="numeric"
+                      className="input-field"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={confirmarEIrAoCardapio}
+                    disabled={!clienteNome.trim() || !clienteTel.trim()}
+                    className="btn-gold w-full py-3 rounded-xl disabled:opacity-50"
+                  >
+                    Ir ao cardápio
+                  </button>
                 </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={confirmarEIrAoCardapio}
-                disabled={!clienteNome.trim() || !clienteTel.trim()}
-                className="btn-gold w-full py-3 rounded-xl disabled:opacity-50"
-              >
-                Ir ao cardápio
-              </button>
+              )}
             </motion.div>
           </motion.div>
         )}
