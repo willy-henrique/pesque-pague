@@ -10,7 +10,7 @@ import { useCollection, orderBy, where } from "@/hooks/useFirestore";
 import { useRequireAtendente } from "@/hooks/useRequireAtendente";
 import { auth } from "@/lib/firebase";
 import { withModoAtendente } from "@/lib/atendente";
-import { getSetoresDoPedido, getSetoresProntos, getStatusGeralPedido, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
+import { getSetoresDoPedido, getSetoresProntos, getStatusDoSetor, getStatusGeralPedido, isPedidoProntoParaRetirada } from "@/lib/pedido-status";
 import { formatarTelefone } from "@/lib/utils";
 import type { Pique, Pedido } from "@/types";
 import toast from "react-hot-toast";
@@ -75,10 +75,8 @@ export default function AtendentePage() {
     // Status "saiu" = todos setores prontos/entregues, todos os atendentes precisam saber
     if (getStatusGeralPedido(pedido) === "saiu") return true;
 
-    // Filtra pelo setor do atendente: só aparece se o setor dele está pronto
-    return setoresAtendente.some((setor) =>
-      setor === "bar" ? pedido.barStatus === "pronto" : pedido.cozinhaStatus === "pronto"
-    );
+    // Filtra pelo setor do atendente usando getStatusDoSetor (inclui fallback legado)
+    return setoresAtendente.some((setor) => getStatusDoSetor(pedido, setor) === "pronto");
   });
   const clientesPorMesa = useMemo(() => {
     const mapa = new Map<string, { nome: string; telefone: string }[]>();
