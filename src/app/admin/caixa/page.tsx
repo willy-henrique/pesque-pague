@@ -252,6 +252,7 @@ export default function Caixa() {
             status: "pago",
             formaPagamento,
             atualizadoEm: serverTimestamp(),
+            ...(incluirServico ? { taxaServico: parseFloat((p.total * 0.1).toFixed(2)) } : {}),
           })
         ),
         updateDoc(doc(db, "piques", grupo.piqueId), { status: "livre" }),
@@ -900,6 +901,19 @@ function ComandaCard({
                   <AlertCircle className="w-3.5 h-3.5" />
                   Confirme que o cliente é da <strong>{grupo.piqueNome}</strong> antes de receber
                 </p>
+                {grupo.clientes.length > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {grupo.clientes.map((c, i) => (
+                      <span key={i} className="text-amber-700 dark:text-amber-400 text-xs flex items-center gap-1">
+                        <UserRound className="w-3 h-3 shrink-0" />
+                        <strong>{c.nome}</strong>
+                        {c.telefone && (
+                          <span className="font-normal opacity-70"> · {c.telefone}</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -908,7 +922,9 @@ function ComandaCard({
                     className="w-4 h-4 accent-amber-500"
                   />
                   <span className="text-amber-800 dark:text-amber-300 text-xs">
-                    Confirmei que é da {grupo.piqueNome} (comanda #{grupo.comandaId})
+                    Confirmei que {grupo.clientes.length === 1
+                      ? <strong>{grupo.clientes[0].nome}</strong>
+                      : "os clientes acima"} {grupo.clientes.length === 1 ? "é" : "são"} da {grupo.piqueNome} (comanda #{grupo.comandaId})
                   </span>
                 </label>
               </div>

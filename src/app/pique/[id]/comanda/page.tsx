@@ -6,7 +6,7 @@ import { useModoAtendenteAuth } from "@/hooks/useModoAtendenteAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Fish, Plus, Clock, Flame, Bike, CheckCircle2, Wallet, XCircle,
-  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote, Store, UserRound, X, Users,
+  ChevronRight, ChevronLeft, Receipt, AlertCircle, Banknote, Store, UserRound, X, Users, Percent,
 } from "lucide-react";
 import {
   collection, query, where, onSnapshot,
@@ -53,6 +53,7 @@ export default function ComandaDoDia() {
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [confirmandoPagamento, setConfirmandoPagamento] = useState(false);
   const [modalPagarSeparado, setModalPagarSeparado] = useState(false);
+  const [comTaxaServico, setComTaxaServico] = useState(false);
 
   // Carrega nome da mesa
   useEffect(() => {
@@ -91,7 +92,9 @@ export default function ComandaDoDia() {
     return unsub;
   }, [id]);
 
-  const totalGeral = pedidos.reduce((s, p) => s + p.total, 0);
+  const totalGeral    = pedidos.reduce((s, p) => s + p.total, 0);
+  const taxaValor     = parseFloat((totalGeral * 0.1).toFixed(2));
+  const totalAReceber = comTaxaServico ? totalGeral + taxaValor : totalGeral;
   const comandaId = getComandaDisplayId(id, pedidos);
   const pedidoMaisRecente = pedidos[0] ?? null;
   const podeAdicionarPedidoAtendente = !modoAtendente || (!!pedidoMaisRecente?.nomeCliente && !!pedidoMaisRecente?.telefoneCliente);
@@ -178,9 +181,12 @@ export default function ComandaDoDia() {
 
   const confirmarPagamento = () => {
     if (pedidos.length === 0) return;
+    const descTaxa = comTaxaServico
+      ? ` (inclui taxa de serviço de ${formatCurrency(taxaValor)})`
+      : "";
     confirm({
       title: "Confirmar pagamento?",
-      description: `Registrar pagamento de ${formatCurrency(totalGeral)} em ${piqueNome} e fechar a comanda? A mesa será liberada.`,
+      description: `Registrar ${formatCurrency(totalAReceber)} em ${piqueNome}${descTaxa}? A mesa será liberada.`,
       confirmLabel: "Confirmar pagamento",
       variant: "default",
       onConfirm: async () => {
@@ -191,6 +197,7 @@ export default function ComandaDoDia() {
               updateDoc(doc(db, "pedidos", p.id), {
                 status: "pago",
                 atualizadoEm: serverTimestamp(),
+                ...(comTaxaServico ? { taxaServico: parseFloat((p.total * 0.1).toFixed(2)) } : {}),
               })
             ),
             updateDoc(doc(db, "piques", id), { status: "livre" }),
@@ -221,13 +228,16 @@ export default function ComandaDoDia() {
   };
 
   const confirmarPagamentoPorCliente = (cliente: string) => {
-    const pedidosCliente = pedidos.filter((p) => (p.nomeCliente?.trim() || "Sem identificação") === cliente);
-    const totalCliente = pedidosCliente.reduce((s, p) => s + p.total, 0);
+    const pedidosCliente   = pedidos.filter((p) => (p.nomeCliente?.trim() || "Sem identificação") === cliente);
+    const subtotalCliente  = pedidosCliente.reduce((s, p) => s + p.total, 0);
+    const taxaCliente      = comTaxaServico ? parseFloat((subtotalCliente * 0.1).toFixed(2)) : 0;
+    const totalCliente     = subtotalCliente + taxaCliente;
     const pedidosRestantes = pedidos.filter((p) => (p.nomeCliente?.trim() || "Sem identificação") !== cliente);
 
+    const descTaxa = comTaxaServico ? ` + taxa ${formatCurrency(taxaCliente)}` : "";
     confirm({
       title: `Pagar de ${cliente}?`,
-      description: `Confirmar ${formatCurrency(totalCliente)} para ${cliente}?${pedidosRestantes.length === 0 ? " A mesa será liberada." : " Os demais clientes continuam em aberto."}`,
+      description: `Confirmar ${formatCurrency(totalCliente)} para ${cliente}${descTaxa}?${pedidosRestantes.length === 0 ? " A mesa será liberada." : " Os demais clientes continuam em aberto."}`,
       confirmLabel: "Confirmar pagamento",
       variant: "default",
       onConfirm: async () => {
@@ -235,7 +245,11 @@ export default function ComandaDoDia() {
         try {
           await Promise.all([
             ...pedidosCliente.map((p) =>
-              updateDoc(doc(db, "pedidos", p.id), { status: "pago", atualizadoEm: serverTimestamp() })
+              updateDoc(doc(db, "pedidos", p.id), {
+                status: "pago",
+                atualizadoEm: serverTimestamp(),
+                ...(comTaxaServico ? { taxaServico: parseFloat((p.total * 0.1).toFixed(2)) } : {}),
+              })
             ),
             ...(pedidosRestantes.length === 0
               ? [updateDoc(doc(db, "piques", id), { status: "livre" })]
@@ -594,26 +608,88 @@ export default function ComandaDoDia() {
         <div className="sticky bottom-0 p-4 max-w-xl mx-auto w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
           {modoAtendente ? (
             <div className="glass rounded-2xl p-2 space-y-2 border border-forest-200">
+
+              {/* Toggle taxa de serviço */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-forest-200/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gold-500/10 flex items-center justify-center">
+                    <Percent className="w-3.5 h-3.5 text-gold-600" />
+                  </div>
+                  <div>
+                    <p className="text-forest-800 text-xs font-semibold">Taxa de serviço (10%)</p>
+                    <p className="text-forest-400 text-[10px]">
+                      {comTaxaServico ? `+${formatCurrency(taxaValor)}` : "Opcional — garçom"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setComTaxaServico((v) => !v)}
+                  className={`w-11 h-6 rounded-full transition-colors shrink-0 ${
+                    comTaxaServico ? "bg-gold-500" : "bg-forest-300"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform mx-0.5 ${
+                    comTaxaServico ? "translate-x-5" : "translate-x-0"
+                  }`} />
+                </button>
+              </div>
+
               {/* Total + clientes */}
-              <div className="flex items-center justify-between px-2 pt-1">
-                <span className="text-forest-500 text-xs">Total a receber</span>
-                <span className="font-bold text-lg text-gold-700">{formatCurrency(totalGeral)}</span>
+              <div className="px-2 pt-1 space-y-1">
+                {/* Nomes dos clientes */}
+                {clientesDaComanda.length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 pb-1">
+                    {clientesDaComanda.map((cliente) => (
+                      <span key={cliente} className="text-water-600 text-xs flex items-center gap-1">
+                        <UserRound className="w-3 h-3" />
+                        {cliente}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {comTaxaServico ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-forest-400 text-xs">Subtotal</span>
+                      <span className="text-forest-600 text-sm">{formatCurrency(totalGeral)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-forest-400 text-xs">Taxa garçom (10%)</span>
+                      <span className="text-gold-600 text-sm font-medium">+ {formatCurrency(taxaValor)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-forest-200/60 pt-1">
+                      <span className="text-forest-700 text-xs font-semibold">Total a receber</span>
+                      <span className="font-bold text-lg text-gold-700">{formatCurrency(totalAReceber)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-forest-500 text-xs">Total a receber</span>
+                    <span className="font-bold text-lg text-gold-700">{formatCurrency(totalGeral)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Subtotais por cliente quando há múltiplos */}
               {clientesDaComanda.length > 1 && (
-                <div className="px-2 pb-1 space-y-1">
-                  {clientesDaComanda.map((cliente) => (
-                    <div key={cliente} className="flex items-center justify-between text-xs">
-                      <span className="text-forest-500 flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {cliente}
-                      </span>
-                      <span className="font-semibold text-forest-700">
-                        {formatCurrency(totaisPorCliente.get(cliente) ?? 0)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="px-2 pb-1 space-y-1 border-t border-forest-200/60 pt-1">
+                  {clientesDaComanda.map((cliente) => {
+                    const sub = totaisPorCliente.get(cliente) ?? 0;
+                    const totalCliente = comTaxaServico ? sub * 1.1 : sub;
+                    return (
+                      <div key={cliente} className="flex items-center justify-between text-xs">
+                        <span className="text-forest-500 flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {cliente}
+                        </span>
+                        <span className="font-semibold text-forest-700">
+                          {formatCurrency(totalCliente)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -656,7 +732,7 @@ export default function ComandaDoDia() {
                     className="btn-gold py-3 rounded-xl text-sm disabled:opacity-60"
                   >
                     <Banknote className="w-4 h-4" />
-                    {confirmandoPagamento ? "..." : "Confirmar pagamento"}
+                    {confirmandoPagamento ? "..." : `Confirmar ${formatCurrency(totalAReceber)}`}
                   </button>
                 </div>
               )}
@@ -738,7 +814,9 @@ export default function ComandaDoDia() {
 
               <div className="space-y-2">
                 {clientesDaComanda.map((cliente) => {
-                  const total = totaisPorCliente.get(cliente) ?? 0;
+                  const sub   = totaisPorCliente.get(cliente) ?? 0;
+                  const taxa  = comTaxaServico ? parseFloat((sub * 0.1).toFixed(2)) : 0;
+                  const total = sub + taxa;
                   return (
                     <div
                       key={cliente}
@@ -750,6 +828,11 @@ export default function ComandaDoDia() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-forest-900 text-sm truncate">{cliente}</p>
                         <p className="text-gold-600 font-bold text-xs">{formatCurrency(total)}</p>
+                        {comTaxaServico && (
+                          <p className="text-forest-400 text-[10px]">
+                            {formatCurrency(sub)} + taxa {formatCurrency(taxa)}
+                          </p>
+                        )}
                       </div>
                       <button
                         type="button"

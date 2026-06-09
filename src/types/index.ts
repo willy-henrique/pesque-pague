@@ -86,6 +86,7 @@ export interface Pedido {
   cozinhaStatus?: SetorOrderStatus;
   barStatus?: SetorOrderStatus;
   formaPagamento?: FormaPagamento;
+  taxaServico?: number;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
