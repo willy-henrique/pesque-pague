@@ -52,6 +52,7 @@ export function canAccessAtendente(profile: Usuario | null) {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "Administrador",
+  admin:     "Administrador",
   atendente: "Atendente",
+  marlon:    "Admin Geral",
 };

@@ -65,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authed, setAuthed]           = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [config, setConfig]           = useState<Config | null>(null);
+  const [permissoes, setPermissoes]   = useState<string[] | null>(null);
   const { data: pedidos } = useCollection<Pedido>("pedidos", [orderBy("criadoEm", "desc")]);
 
   useEffect(() => {
@@ -112,6 +113,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           router.replace("/novo/login");
           return;
         }
+        // Store permissions (undefined/[] = full access)
+        const perms = (profile as { permissoes?: string[] }).permissoes ?? [];
+        setPermissoes(perms);
+
+        // If current path is restricted, redirect to first allowed section
+        if (perms.length > 0) {
+          const seg = pathname.replace("/novo/", "").split("/")[0];
+          if (seg && !perms.includes(seg)) {
+            router.replace(`/novo/${perms[0]}`);
+            return;
+          }
+        }
         setAuthed(true);
       } catch {
         await signOut(auth);
@@ -144,6 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           pathname={pathname}
           dark={dark}
           navBadges={navBadges}
+          permissoes={permissoes}
           onToggleTheme={toggle}
           onLogout={handleLogout}
           nomeEstab={nomeEstab}
@@ -182,6 +196,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 pathname={pathname}
                 dark={dark}
                 navBadges={navBadges}
+                permissoes={permissoes}
                 onToggleTheme={toggle}
                 onLogout={handleLogout}
                 onNavClick={() => setSidebarOpen(false)}
@@ -246,6 +261,7 @@ function SidebarContent({
   pathname,
   dark,
   navBadges,
+  permissoes,
   onToggleTheme,
   onLogout,
   onNavClick,
@@ -255,6 +271,7 @@ function SidebarContent({
   pathname: string;
   dark: boolean;
   navBadges: Record<string, number>;
+  permissoes: string[] | null;
   onToggleTheme: () => void;
   onLogout: () => void;
   onNavClick?: () => void;
@@ -302,7 +319,11 @@ function SidebarContent({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.filter(({ href }) => {
+          if (!permissoes || permissoes.length === 0) return true;
+          const seg = href.replace("/novo/", "").split("/")[0];
+          return permissoes.includes(seg);
+        }).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const badge = navBadges[href] ?? 0;
           return (

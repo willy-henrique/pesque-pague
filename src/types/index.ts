@@ -109,7 +109,12 @@ export interface Config {
   modoManutencao: boolean;
 }
 
-export type UserRole = "admin" | "atendente";
+export type UserRole = "admin" | "atendente" | "marlon";
+
+export type AdminPermissao =
+  | "dashboard" | "caixa" | "cozinha" | "bar"
+  | "produtos" | "categorias" | "piques" | "promocoes"
+  | "relatorios" | "atendentes" | "usuarios" | "configuracoes";
 
 export interface Usuario {
   id: string;
@@ -118,6 +123,7 @@ export interface Usuario {
   role: UserRole;
   ativo: boolean;
   setores?: SetorPedido[];
+  permissoes?: AdminPermissao[]; // undefined/[] = acesso total
   criadoEm: Timestamp;
 }
 

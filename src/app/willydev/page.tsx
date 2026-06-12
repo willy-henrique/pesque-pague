@@ -6,7 +6,7 @@ import {
   Terminal, Shield, UserPlus, Trash2, Eye, EyeOff,
   CheckCircle2, XCircle, RefreshCw, Lock, LogOut, AlertTriangle,
   BarChart3, Users, Activity, ChefHat, GlassWater, Fish,
-  Banknote, TableProperties, Zap, Clock,
+  Banknote, TableProperties, Zap, Clock, FlameKindling,
 } from "lucide-react";
 import {
   signInWithEmailAndPassword, signOut, onAuthStateChanged, type User,
@@ -17,7 +17,7 @@ import { auth } from "@/lib/firebase";
 const DEV_EMAIL = "willydev01@gmail.com";
 
 /* ── Types ─────────────────────────────────────────────── */
-type Tab = "overview" | "admins" | "atendentes" | "logs";
+type Tab = "overview" | "admins" | "atendentes" | "logs" | "reset";
 
 interface AdminUser { id: string; nome: string; email: string; ativo: boolean; criadoEm: string | null }
 interface AtendenteUser { id: string; nome: string; email: string; ativo: boolean; setores?: string[]; criadoEm: string | null }
@@ -77,12 +77,23 @@ export default function WillyDevPage() {
   const [tab, setTab]             = useState<Tab>("overview");
 
   // Login form
-  const [emailInput, setEmailInput] = useState(DEV_EMAIL);
   const [senhaInput, setSenhaInput] = useState("");
   const [showSenha, setShowSenha]   = useState(false);
   const [authError, setAuthError]   = useState("");
   const [logging, setLogging]       = useState(false);
   const [initializing, setInitializing] = useState(false);
+
+  // Reset system
+  const [resetInput, setResetInput]   = useState("");
+  const [resetting, setResetting]     = useState(false);
+  const [resetResult, setResetResult] = useState<{ pedidos: number; fechamentos: number; logs: number; mesasResetadas: number } | null>(null);
+
+  // Marlon account setup
+  const [marlonEmail, setMarlonEmail]     = useState("");
+  const [marlonSenha, setMarlonSenha]     = useState("");
+  const [marlonSenhaVis, setMarlonSenhaVis] = useState(false);
+  const [marlonSaving, setMarlonSaving]   = useState(false);
+  const [marlonMsg, setMarlonMsg]         = useState<{ ok: boolean; text: string } | null>(null);
 
   // Data
   const [stats, setStats]               = useState<Stats | null>(null);
@@ -202,14 +213,10 @@ export default function WillyDevPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
-    if (emailInput !== DEV_EMAIL) {
-      setAuthError("Acesso permitido apenas para a conta de desenvolvedor.");
-      return;
-    }
     setLogging(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const cred = await signInWithEmailAndPassword(auth, emailInput, senhaInput);
+      const cred = await signInWithEmailAndPassword(auth, DEV_EMAIL, senhaInput);
       // Write login log after successful auth
       const idToken = await cred.user.getIdToken();
       void fetch("/api/dev/logs", {
@@ -234,6 +241,40 @@ export default function WillyDevPage() {
     setUser(null);
     loadedTabs.current.clear();
     setStats(null); setAdmins([]); setAtendentes([]); setLogs([]);
+  };
+
+  const handleMarlonInit = async () => {
+    if (!user) return;
+    if (!marlonEmail.includes("@")) { setMarlonMsg({ ok: false, text: "E-mail inválido." }); return; }
+    if (marlonSenha.length < 6)    { setMarlonMsg({ ok: false, text: "Senha mínima: 6 caracteres." }); return; }
+    setMarlonSaving(true);
+    setMarlonMsg(null);
+    try {
+      const res  = await devApi(user, "/api/marlon/init", {
+        method: "POST",
+        body: JSON.stringify({ email: marlonEmail, senha: marlonSenha }),
+      });
+      const data = await res.json() as { ok?: boolean; created?: boolean; error?: string };
+      if (!res.ok) { setMarlonMsg({ ok: false, text: data.error ?? "Erro." }); return; }
+      setMarlonMsg({ ok: true, text: data.created ? `Conta criada para ${marlonEmail}.` : `Conta de ${marlonEmail} já existe — permissão atualizada.` });
+      setMarlonSenha("");
+    } finally { setMarlonSaving(false); }
+  };
+
+  const handleReset = async () => {
+    if (!user || resetInput !== "LIMPAR") return;
+    setResetting(true);
+    setResetResult(null);
+    try {
+      const res  = await devApi(user, "/api/dev/reset", { method: "POST", body: JSON.stringify({ confirmacao: "LIMPAR" }) });
+      const data = await res.json() as { ok?: boolean; removidos?: { pedidos: number; fechamentos: number; logs: number }; mesasResetadas?: number; error?: string };
+      if (!res.ok) { alert(data.error ?? "Erro ao limpar."); return; }
+      setResetResult({ ...data.removidos!, mesasResetadas: data.mesasResetadas ?? 0 });
+      setResetInput("");
+      // Refresh stats
+      loadedTabs.current.delete("overview");
+      loadedTabs.current.delete("logs");
+    } finally { setResetting(false); }
   };
 
   /* ── Admin CRUD ───────────────────────────────────────── */
@@ -385,15 +426,6 @@ export default function WillyDevPage() {
             </div>
 
             <form onSubmit={handleLogin} className="space-y-3">
-              <div>
-                <label className="text-[#8B949E] text-xs font-medium block mb-1">E-mail</label>
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-3 py-2.5 text-[#E6EDF3] font-mono text-sm placeholder-[#484F58] outline-none focus:border-[#58A6FF] transition-colors"
-                />
-              </div>
               <div className="relative">
                 <label className="text-[#8B949E] text-xs font-medium block mb-1">Senha</label>
                 <input
@@ -449,11 +481,12 @@ export default function WillyDevPage() {
   /* ════════════════════════════════════════════════════════
      MAIN PANEL
   ════════════════════════════════════════════════════════ */
-  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",   label: "Visão Geral",  icon: BarChart3    },
-    { id: "admins",     label: "Admins",        icon: Shield       },
-    { id: "atendentes", label: "Atendentes",    icon: Users        },
-    { id: "logs",       label: "Logs",          icon: Activity     },
+  const TABS: { id: Tab; label: string; icon: React.ElementType; danger?: boolean }[] = [
+    { id: "overview",   label: "Visão Geral",  icon: BarChart3       },
+    { id: "admins",     label: "Admins",        icon: Shield          },
+    { id: "atendentes", label: "Atendentes",    icon: Users           },
+    { id: "logs",       label: "Logs",          icon: Activity        },
+    { id: "reset",      label: "Limpar",        icon: FlameKindling, danger: true },
   ];
 
   return (
@@ -468,14 +501,18 @@ export default function WillyDevPage() {
 
           {/* Tabs */}
           <nav className="flex items-center gap-1 ml-4 overflow-x-auto">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {TABS.map(({ id, label, icon: Icon, danger }) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   tab === id
-                    ? "bg-[#0D1117] text-[#58A6FF] border border-[#30363D]"
-                    : "text-[#8B949E] hover:text-[#E6EDF3] hover:bg-[#0D1117]/60"
+                    ? danger
+                      ? "bg-[#0D1117] text-red-400 border border-red-500/40"
+                      : "bg-[#0D1117] text-[#58A6FF] border border-[#30363D]"
+                    : danger
+                      ? "text-red-500/70 hover:text-red-400 hover:bg-red-500/10"
+                      : "text-[#8B949E] hover:text-[#E6EDF3] hover:bg-[#0D1117]/60"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -543,6 +580,36 @@ export default function WillyDevPage() {
               ) : (
                 <p className="text-[#8B949E] text-sm">Nenhum dado disponível.</p>
               )}
+
+              {/* Marlon setup card */}
+              <div className="bg-[#161B22] border border-[#30363D] rounded-2xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-[#21262D] flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-amber-400" />
+                  <p className="text-[#E6EDF3] text-xs font-semibold">Conta do Admin Geral <span className="text-[#8B949E] font-normal">(Marlon · /marlon)</span></p>
+                </div>
+                <div className="p-5 space-y-3">
+                  <p className="text-[#8B949E] text-xs">Cria ou atualiza a conta que acessa o painel <span className="font-mono text-[#58A6FF]">/marlon</span>. O login precisa ser criado aqui antes de funcionar.</p>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <DevInput label="E-mail" type="email" value={marlonEmail} onChange={setMarlonEmail} placeholder="marlon@email.com" />
+                    <DevInput label="Senha" type={marlonSenhaVis ? "text" : "password"} value={marlonSenha} onChange={setMarlonSenha} placeholder="mín. 6 caracteres"
+                      action={
+                        <button type="button" onClick={() => setMarlonSenhaVis((v) => !v)} className="text-[#8B949E] hover:text-[#E6EDF3]">
+                          {marlonSenhaVis ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      } />
+                  </div>
+                  {marlonMsg && (
+                    <p className={`text-xs flex items-center gap-1.5 ${marlonMsg.ok ? "text-[#3FB950]" : "text-red-400"}`}>
+                      {marlonMsg.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <XCircle className="w-3.5 h-3.5 shrink-0" />}
+                      {marlonMsg.text}
+                    </p>
+                  )}
+                  <button onClick={handleMarlonInit} disabled={marlonSaving || !marlonEmail || !marlonSenha}
+                    className="w-full py-2.5 rounded-xl bg-amber-600/80 hover:bg-amber-500/80 text-white text-sm font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                    {marlonSaving ? <><RefreshCw className="w-4 h-4 animate-spin" /> Criando...</> : <><Shield className="w-4 h-4" /> Criar / Atualizar conta Marlon</>}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -715,6 +782,83 @@ export default function WillyDevPage() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* ── RESET ────────────────────────────────────── */}
+          {tab === "reset" && (
+            <motion.div key="reset" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-xl">
+              <div>
+                <h2 className="text-[#E6EDF3] font-semibold">Limpar Sistema</h2>
+                <p className="text-[#8B949E] text-sm mt-1">Use antes de entregar o sistema ao cliente para remover todos os dados de teste.</p>
+              </div>
+
+              {/* What will be deleted */}
+              <div className="bg-[#161B22] border border-red-500/20 rounded-2xl p-5 space-y-3">
+                <p className="text-red-400 text-xs font-semibold uppercase tracking-widest flex items-center gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5" /> O que será removido
+                </p>
+                <ul className="space-y-1.5">
+                  {[
+                    "Todos os pedidos (coleção pedidos)",
+                    "Todos os fechamentos de caixa (coleção fechamentos)",
+                    "Todos os logs do sistema (coleção logs)",
+                    "Status de todas as mesas será resetado para livre",
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-[#E6EDF3] text-xs">
+                      <Trash2 className="w-3 h-3 text-red-400 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t border-[#30363D] pt-3">
+                  <p className="text-[#3FB950] text-xs font-semibold uppercase tracking-widest mb-1.5">O que será preservado</p>
+                  <ul className="space-y-1">
+                    {["Usuários (admins e atendentes)", "Produtos e categorias", "Mesas (configuração)", "Promoções", "Configurações do sistema"].map((item) => (
+                      <li key={item} className="flex items-center gap-2 text-[#8B949E] text-xs">
+                        <CheckCircle2 className="w-3 h-3 text-[#3FB950] shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Result */}
+              {resetResult && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-[#3FB950]/10 border border-[#3FB950]/30 rounded-2xl p-4 space-y-1">
+                  <p className="text-[#3FB950] text-sm font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Sistema limpo com sucesso!
+                  </p>
+                  <p className="text-[#8B949E] text-xs">
+                    {resetResult.pedidos} pedidos · {resetResult.fechamentos} fechamentos · {resetResult.logs} logs removidos · {resetResult.mesasResetadas} mesas resetadas
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Confirmation input */}
+              <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-5 space-y-4">
+                <p className="text-[#E6EDF3] text-sm">
+                  Para confirmar, digite <span className="font-mono font-bold text-red-400">LIMPAR</span> no campo abaixo:
+                </p>
+                <input
+                  type="text"
+                  value={resetInput}
+                  onChange={(e) => { setResetInput(e.target.value); setResetResult(null); }}
+                  placeholder="LIMPAR"
+                  className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-4 py-3 text-[#E6EDF3] font-mono text-sm placeholder-[#484F58] outline-none focus:border-red-500/50 transition-colors tracking-widest"
+                />
+                <button
+                  onClick={handleReset}
+                  disabled={resetInput !== "LIMPAR" || resetting}
+                  className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {resetting
+                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> Limpando...</>
+                    : <><FlameKindling className="w-4 h-4" /> Limpar todos os dados de teste</>}
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
